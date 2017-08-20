@@ -1,6 +1,12 @@
 Xposed module for Alipay App which makes you HighHeadsomeRich immediately.
+
 这是一个Xposed模块，它可以让你的支付宝显示瞬间富有。
 
 付款时候为钻石黑色背景。
 
-由于作者自己用，因此简单做成在白金会员才会提升至钻石会员付款码。可以pull request来完善这个东西。
+![alt text](https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/Screenshot_Settings.png "设置页面")
+![alt text](https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/Screenshot_Alipay_Yuebao.png "余额宝显示")
+![alt text](https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/Screenshot_Alipay_Diamond.jpg "付款时背景")
+
+
+有兴趣小伙伴可以提交代码来完善这个东西。
