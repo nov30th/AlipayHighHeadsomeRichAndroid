@@ -10,15 +10,34 @@
     tools:context="im.hoho.alipayInstallB.MainActivity">
 
 
+    <Switch
+        android:id="@+id/switchYuEBao"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/textView"
+        android:layout_marginTop="18dp"
+        android:text="余额宝修改开关"
+        android:layout_alignParentEnd="true" />
+
+    <Switch
+        android:id="@+id/switchBackground"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/switchYuEBao"
+        android:text="钻石背景修改开关" />
+
     <TextView
         android:id="@+id/textView3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="47dp"
         android:text="累计收益设定"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:layout_below="@+id/switchBackground"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="51dp" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -27,8 +46,7 @@
         android:text="支付宝装B模块 By http://hoho.im"
         android:id="@+id/textView"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_centerHorizontal="true" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -36,8 +54,9 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="支付宝增加余额"
         android:id="@+id/textView2"
-        android:layout_above="@+id/editText"
-        android:layout_centerHorizontal="true" />
+        android:layout_below="@+id/textView3"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="41dp" />
 
     <EditText
         android:layout_width="wrap_content"
@@ -45,8 +64,8 @@
         android:inputType="number"
         android:ems="10"
         android:id="@+id/editText"
-        android:layout_centerVertical="true"
-        android:layout_alignStart="@+id/editText2" />
+        android:layout_below="@+id/textView2"
+        android:layout_alignParentStart="true" />
 
     <EditText
         android:id="@+id/editText2"
@@ -55,5 +74,6 @@
         android:ems="10"
         android:inputType="number"
         android:layout_below="@+id/textView3"
-        android:layout_centerHorizontal="true" />
+        android:layout_alignParentStart="true" />
+
 </RelativeLayout>

@@ -6,12 +6,17 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.Switch;
 
 public class MainActivity extends AppCompatActivity {
 
     private EditText editText;
     private EditText editText2;
+    private Switch switchYuEBao;
+    private Switch switchBackground;
 
 
     private SharedPreferences sp;
@@ -40,14 +45,36 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
 
 
-//        R.layout.activity_main = sp.edit();
-//        editor.putString("test_put", "test_put");
-
         editText = (EditText) findViewById(R.id.editText);
         editText.setText(sp.getString("yuebaoIncreaseAmount", "20000000"));
 
         editText2 = (EditText) findViewById(R.id.editText2);
         editText2.setText(sp.getString("yuebaoTotalProfit", "172823.23"));
+
+        switchBackground = (Switch) findViewById(R.id.switchBackground);
+        if (sp.getString("enableBackground", "true").equals("true"))
+            switchBackground.setChecked(true);
+        switchYuEBao = (Switch) findViewById(R.id.switchYuEBao);
+        if (sp.getString("enableYuEBao", "true").equals("true"))
+            switchYuEBao.setChecked(true);
+
+        switchYuEBao.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                editor.putString("enableYuEBao", Boolean.toString(isChecked).toLowerCase());
+                editor.apply();
+            }
+        });
+
+        switchBackground.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                editor.putString("enableBackground", Boolean.toString(isChecked).toLowerCase());
+                editor.apply();
+            }
+        });
+
+
 
         editText.addTextChangedListener(new TextWatcher() {
             @Override

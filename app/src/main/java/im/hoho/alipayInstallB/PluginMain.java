@@ -71,7 +71,7 @@ public class PluginMain implements IXposedHookLoadPackage {
 //
         if (lpparam.packageName.contains("com.eg.android.AlipayGphone")) {
             XposedBridge.log("Loaded App: " + lpparam.packageName);
-            XposedBridge.log("Powered by HOHO`` 20170309");
+            XposedBridge.log("Powered by HOHO`` 20170821");
 
 //            //StackTraceElement[] getStackTrace
 ////            throw Exception
@@ -145,6 +145,16 @@ public class PluginMain implements IXposedHookLoadPackage {
                         protected void afterHookedMethod(MethodHookParam param)
                                 throws Throwable {
                             XposedBridge.log("Now, let's install B...");
+                            XSharedPreferences pre = new XSharedPreferences("im.hoho.alipayInstallB", "prefs");
+                            pre.makeWorldReadable();
+                            String enabledBackground = pre.getString("enableBackground", "true");
+                            XposedBridge.log("enableBackground value: " + enabledBackground);
+
+                            if (!enabledBackground.equals("true")) {
+                                XposedBridge.log("Install B is failed! Not enabled.");
+                                return;
+                            }
+
                             Map<String, String> result = (Map<String, String>) param.getResult();
                             if (result.containsKey("memberGrade")) {
                                 XposedBridge.log("Original member grade: " + result.get("memberGrade"));
@@ -170,65 +180,65 @@ public class PluginMain implements IXposedHookLoadPackage {
                         }
                     });
 
-            //download url
-            XposedHelpers.findAndHookMethod(
-                    "com.alipay.mobile.framework.service.ext.openplatform.domain.AppEntity",
-                    lpparam.classLoader,
-                    "setDownloadUrl",
-                    String.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param)
-                                throws Throwable {
-                            XposedBridge.log("setDownloadUrl: " + param.args[0]);
-                        }
-                    });
+//            //download url
+//            XposedHelpers.findAndHookMethod(
+//                    "com.alipay.mobile.framework.service.ext.openplatform.domain.AppEntity",
+//                    lpparam.classLoader,
+//                    "setDownloadUrl",
+//                    String.class,
+//                    new XC_MethodHook() {
+//                        @Override
+//                        protected void afterHookedMethod(MethodHookParam param)
+//                                throws Throwable {
+//                            XposedBridge.log("setDownloadUrl: " + param.args[0]);
+//                        }
+//                    });
 
-            //setPageUrl
-            XposedHelpers.findAndHookMethod(
-                    "com.alipay.mobile.framework.service.ext.openplatform.domain.AppEntity",
-                    lpparam.classLoader,
-                    "setPageUrl",
-                    String.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param)
-                                throws Throwable {
-                            XposedBridge.log("setPageUrl: " + param.args[0]);
-                        }
-                    });
+//            //setPageUrl
+//            XposedHelpers.findAndHookMethod(
+//                    "com.alipay.mobile.framework.service.ext.openplatform.domain.AppEntity",
+//                    lpparam.classLoader,
+//                    "setPageUrl",
+//                    String.class,
+//                    new XC_MethodHook() {
+//                        @Override
+//                        protected void afterHookedMethod(MethodHookParam param)
+//                                throws Throwable {
+//                            XposedBridge.log("setPageUrl: " + param.args[0]);
+//                        }
+//                    });
 
-            //feeAmount
-            XposedHelpers.findAndHookMethod(
-                    "com.alipay.wealth.common.ui.PopupFloatView",
-                    lpparam.classLoader,
-                    "setFeeAmount",
-                    String.class,
-                    String.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param)
-                                throws Throwable {
-                            XposedBridge.log("setFeeAmount 1st: " + param.args[0]);
-                            XposedBridge.log("setFeeAmount 2st: " + param.args[1]);
-                        }
-                    });
+//            //feeAmount
+//            XposedHelpers.findAndHookMethod(
+//                    "com.alipay.wealth.common.ui.PopupFloatView",
+//                    lpparam.classLoader,
+//                    "setFeeAmount",
+//                    String.class,
+//                    String.class,
+//                    new XC_MethodHook() {
+//                        @Override
+//                        protected void afterHookedMethod(MethodHookParam param)
+//                                throws Throwable {
+//                            XposedBridge.log("setFeeAmount 1st: " + param.args[0]);
+//                            XposedBridge.log("setFeeAmount 2st: " + param.args[1]);
+//                        }
+//                    });
 
-            //feeAmount2
-            XposedHelpers.findAndHookMethod(
-                    "com.alipay.wealth.common.ui.PopupFloatView",
-                    lpparam.classLoader,
-                    "setFeeAmountValue",
-                    String.class,
-                    boolean.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param)
-                                throws Throwable {
-                            XposedBridge.log("setFeeAmountValue 1st: " + param.args[0]);
-                            XposedBridge.log("setFeeAmountValue 2st: " + param.args[1].toString());
-                        }
-                    });
+//            //feeAmount2
+//            XposedHelpers.findAndHookMethod(
+//                    "com.alipay.wealth.common.ui.PopupFloatView",
+//                    lpparam.classLoader,
+//                    "setFeeAmountValue",
+//                    String.class,
+//                    boolean.class,
+//                    new XC_MethodHook() {
+//                        @Override
+//                        protected void afterHookedMethod(MethodHookParam param)
+//                                throws Throwable {
+//                            XposedBridge.log("setFeeAmountValue 1st: " + param.args[0]);
+//                            XposedBridge.log("setFeeAmountValue 2st: " + param.args[1].toString());
+//                        }
+//                    });
 
 
             //Yu'ebao
@@ -245,6 +255,17 @@ public class PluginMain implements IXposedHookLoadPackage {
                         protected void beforeHookedMethod(MethodHookParam param)
                                 throws Throwable {
                             XposedBridge.log("Let's do it...Changing me to GaoShuaiFu!");
+                            XSharedPreferences pre = new XSharedPreferences("im.hoho.alipayInstallB", "prefs");
+                            pre.makeWorldReadable();
+                            String enableYuEBao = pre.getString("enableYuEBao", "true");
+                            XposedBridge.log("enableYuEBao value: " + enableYuEBao);
+                            if (!enableYuEBao.equals("true")) {
+                                XposedBridge.log("Not enabled, keep original...");
+                                return;
+                            }
+
+                            String increaseString = pre.getString("yuebaoIncreaseAmount", "512345");
+                            String totalProfitSetString = pre.getString("yuebaoTotalProfit", "512345");
 
                             boolean canSetPreProfit = false;
                             Field previousProfitField = FundHomeInfoV99ResultPB.getDeclaredField("previousProfit");
@@ -265,10 +286,6 @@ public class PluginMain implements IXposedHookLoadPackage {
                             }
 
                             BigDecimal totalAmountProcessing = new BigDecimal(totalAmount);
-                            XSharedPreferences pre = new XSharedPreferences("im.hoho.alipayInstallB", "prefs");
-                            pre.makeWorldReadable();
-                            String increaseString = pre.getString("yuebaoIncreaseAmount","512345");
-                            String totalProfitSetString  = pre.getString("yuebaoTotalProfit","512345");
 
                             if (!increaseString.equals("1130")) {
                                 BigDecimal increaseTotal = new BigDecimal(increaseString);
@@ -284,12 +301,12 @@ public class PluginMain implements IXposedHookLoadPackage {
                                 totalAmountProcessing = totalAmountProcessing.add(increaseTotal).setScale(2, RoundingMode.HALF_EVEN);
                                 previousProfitProcessing = totalAmountProcessing.divide(profitRatio, 2, RoundingMode.HALF_EVEN);
 
-                                XposedBridge.log("totalProfit before: " +(String)totalProfitField.get(param.args[0]));
+                                XposedBridge.log("totalProfit before: " + (String) totalProfitField.get(param.args[0]));
                                 XposedBridge.log("previousProfit before: " + previousProfit);
                                 XposedBridge.log("totalAmount before: " + totalAmount);
                                 XposedBridge.log("totalProfit settings value: " + totalProfitSetString);
 
-                                totalProfitField.set(param.args[0],totalProfitDec.toString());
+                                totalProfitField.set(param.args[0], totalProfitDec.toString());
                                 if (canSetPreProfit)
                                     previousProfitField.set(param.args[0], previousProfitProcessing.toPlainString());
                                 totalAmountField.set(param.args[0], totalAmountProcessing.toPlainString());
@@ -297,10 +314,10 @@ public class PluginMain implements IXposedHookLoadPackage {
                                 XposedBridge.log("previousProfit after: " + (String) previousProfitField.get(param.args[0]));
                                 XposedBridge.log("totalAmount after: " + (String) totalAmountField.get(param.args[0]));
                                 XposedBridge.log("totalProfit after: " + (String) totalProfitField.get(param.args[0]));
-                            }else{
+                            } else {
                                 previousProfitField.set(param.args[0], "神！");
-                                totalAmountField.set(param.args[0],"高端大气上档次");
-                                weekRateField.set(param.args[0],"狂拽酷炫吊炸天");
+                                totalAmountField.set(param.args[0], "高端大气上档次");
+                                weekRateField.set(param.args[0], "狂拽酷炫吊炸天");
                             }
                         }
                     });
