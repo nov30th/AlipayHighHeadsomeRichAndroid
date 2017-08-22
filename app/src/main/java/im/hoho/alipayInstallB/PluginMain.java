@@ -257,15 +257,15 @@ public class PluginMain implements IXposedHookLoadPackage {
                             XposedBridge.log("Let's do it...Changing me to GaoShuaiFu!");
                             XSharedPreferences pre = new XSharedPreferences("im.hoho.alipayInstallB", "prefs");
                             pre.makeWorldReadable();
+                            String increaseString = pre.getString("yuebaoIncreaseAmount", "12345678");
+                            String totalProfitSetString = pre.getString("yuebaoTotalProfit", "123456");
                             String enableYuEBao = pre.getString("enableYuEBao", "true");
+
                             XposedBridge.log("enableYuEBao value: " + enableYuEBao);
                             if (!enableYuEBao.equals("true")) {
                                 XposedBridge.log("Not enabled, keep original...");
                                 return;
                             }
-
-                            String increaseString = pre.getString("yuebaoIncreaseAmount", "512345");
-                            String totalProfitSetString = pre.getString("yuebaoTotalProfit", "512345");
 
                             boolean canSetPreProfit = false;
                             Field previousProfitField = FundHomeInfoV99ResultPB.getDeclaredField("previousProfit");
@@ -277,12 +277,33 @@ public class PluginMain implements IXposedHookLoadPackage {
                             String previousProfit = (String) previousProfitField.get(param.args[0]);//最后收益
                             String totalAmount = (String) totalAmountField.get(param.args[0]);//总金额
 
+
                             if (previousProfit.contains("."))
                                 canSetPreProfit = true;
+                            XposedBridge.log("previousProfit: " + previousProfit);
+
                             BigDecimal previousProfitProcessing = canSetPreProfit ? new BigDecimal(previousProfit) : BigDecimal.ONE;
-                            if (previousProfitProcessing.equals(BigDecimal.ZERO)) {
-                                XposedBridge.log("So poor... earned no money in yu'e bao.");
-                                return;
+                            XposedBridge.log("previousProfitProcessing: " + previousProfitProcessing.toString());
+                            if (previousProfitProcessing.compareTo(BigDecimal.ZERO) <= 0) {
+                                XposedBridge.log("So poor... earned no money in yu'e bao. Now let's calc the previousProfit.");
+                                BigDecimal weekRate;
+                                try {
+                                    weekRate = new BigDecimal((String) weekRateField.get(param.args[0]));
+                                } catch (Exception ex) {
+                                    XposedBridge.log("Failed to get the week rate, no digits will be changed.");
+                                    return;
+                                }
+                                if (weekRate.compareTo(BigDecimal.ZERO) <= 0) {
+                                    XposedBridge.log("Week rate is 0.WTF?");
+                                    return;
+                                }
+                                XposedBridge.log("Week rate is " + weekRate.toString());
+
+                                XposedBridge.log("I'm ready, this v1.0.8 version will calc the previousProfit for you...");
+                                previousProfit = "0.01";//assume the previous profit is 0.01
+                                previousProfitProcessing= BigDecimal.valueOf(0.01);
+                                totalAmount = previousProfitProcessing.multiply(BigDecimal.valueOf(365)).divide(weekRate,20, BigDecimal.ROUND_HALF_EVEN).multiply(BigDecimal.valueOf(100)).toString();
+                                XposedBridge.log("Calcing is finished, totalAmount will be override to: " + totalAmount);
                             }
 
                             BigDecimal totalAmountProcessing = new BigDecimal(totalAmount);
@@ -292,13 +313,14 @@ public class PluginMain implements IXposedHookLoadPackage {
                                 BigDecimal totalProfitDec = new BigDecimal(totalProfitSetString).setScale(2, RoundingMode.HALF_EVEN);
 
                                 if (totalAmountProcessing.compareTo(increaseTotal) > 0) {
-                                    XposedBridge.log("Your total amount larger than the increasing value, skip increasing.");
+                                    XposedBridge.log("Your total amount larger than the increasing value, now decreasing to increased value....");
                                     return;
                                 }
 
 
-                                BigDecimal profitRatio = totalAmountProcessing.divide(previousProfitProcessing, 10, RoundingMode.HALF_EVEN);
+                                BigDecimal profitRatio = totalAmountProcessing.divide(previousProfitProcessing, 30, RoundingMode.HALF_EVEN);
                                 totalAmountProcessing = totalAmountProcessing.add(increaseTotal).setScale(2, RoundingMode.HALF_EVEN);
+                                XposedBridge.log("profitRatio: " + profitRatio.toString());
                                 previousProfitProcessing = totalAmountProcessing.divide(profitRatio, 2, RoundingMode.HALF_EVEN);
 
                                 XposedBridge.log("totalProfit before: " + (String) totalProfitField.get(param.args[0]));

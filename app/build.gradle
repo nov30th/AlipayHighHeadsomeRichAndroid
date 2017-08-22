@@ -8,8 +8,8 @@ android {
         applicationId "im.hoho.alipayInstallB"
         minSdkVersion 21
         targetSdkVersion 25
-        versionCode 3
-        versionName "1.0.4"
+        versionCode 8
+        versionName "1.0.8"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
