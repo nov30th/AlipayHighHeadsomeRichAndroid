@@ -278,11 +278,13 @@ public class PluginMain implements IXposedHookLoadPackage {
                             String totalAmount = (String) totalAmountField.get(param.args[0]);//总金额
 
 
+
                             if (previousProfit.contains("."))
                                 canSetPreProfit = true;
                             XposedBridge.log("previousProfit: " + previousProfit);
 
-                            BigDecimal previousProfitProcessing = canSetPreProfit ? new BigDecimal(previousProfit) : BigDecimal.ONE;
+                            BigDecimal previousProfitProcessing = canSetPreProfit ? new BigDecimal(previousProfit) : BigDecimal.ZERO;
+                            canSetPreProfit = true;//Force profit sets.
                             XposedBridge.log("previousProfitProcessing: " + previousProfitProcessing.toString());
                             if (previousProfitProcessing.compareTo(BigDecimal.ZERO) <= 0) {
                                 XposedBridge.log("So poor... earned no money in yu'e bao. Now let's calc the previousProfit.");
