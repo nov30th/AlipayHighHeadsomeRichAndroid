@@ -1,4 +1,4 @@
-Download latest [2.2.8](2018.06): https://hoho.im/download/im.hoho.alipayInstallB_v39_b5d0c9.apk
+Download latest \[2.2.8\](2018.06): https://hoho.im/download/im.hoho.alipayInstallB_v39_b5d0c9.apk
 
 Xposed module for Alipay App which makes you HighHeadsomeRich immediately.
 
