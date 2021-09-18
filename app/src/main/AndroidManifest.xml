@@ -17,6 +17,7 @@
         <meta-data
             android:name="xposedminversion"
             android:value="53" />
+
         <activity android:name="im.hoho.alipayInstallB.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

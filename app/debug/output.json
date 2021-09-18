@@ -1,0 +1,19 @@
+[
+  {
+    "outputType": {
+      "type": "APK"
+    },
+    "apkInfo": {
+      "type": "MAIN",
+      "splits": [],
+      "versionCode": 30,
+      "versionName": "0.7.4",
+      "enabled": true,
+      "outputFile": "app-debug.apk",
+      "fullName": "debug",
+      "baseName": "debug"
+    },
+    "path": "app-debug.apk",
+    "properties": {}
+  }
+]
