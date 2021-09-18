@@ -1,26 +1,21 @@
 package im.hoho.alipayInstallB;
 
-import android.app.Activity;
-import android.content.SharedPreferences;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.View;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.Switch;
+import android.support.v7.app.AppCompatActivity;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
-    private EditText editText;
-    private EditText editText2;
-    private Switch switchYuEBao;
-    private Switch switchBackground;
-
-
-    private SharedPreferences sp;
-    private SharedPreferences.Editor editor;
+    //    private Switch switchEnableMatchSee;
+//    private Switch switchEnableSoul;
+//
+//
+//    private SharedPreferences sp;
+//    private SharedPreferences.Editor editor;
+    private ListView listview;
+    private TextView textView;
 
     //
 
@@ -29,87 +24,25 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        sp = getSharedPreferences("prefs", Activity.MODE_WORLD_READABLE);
-        editor = sp.edit();
 
-        if (sp.getString("yuebaoIncreaseAmount", "").equals("")) {
-            //first time
-            editor.putString("yuebaoIncreaseAmount", "20000000");
-        }
+        listview = (ListView) findViewById(R.id.listview);
+        textView = (TextView) findViewById(R.id.textView2);
 
-        if (sp.getString("yuebaoTotalProfit", "").equals("")) {
-            //first time
-            editor.putString("yuebaoTotalProfit", "172823.23");
-        }
+        textView.setText("2.3.0 LTW");
 
-        editor.apply();
+        listview.setDividerHeight(0);//屏蔽掉listview的横线
+        listview.setDivider(null);
 
+        String[] listContent = {"Author: 裘小杰 - hoho.im",
+                "支付宝付款显示钻石会员背景。",
+                "适配支付宝10.2.33后(20210917)，由于共享参数失效导致大众会员问题。",
+                "目前没有会员样式选择，只有钻石付款页面。"
+        };
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_expandable_list_item_1,
+                listContent);
+        listview.setAdapter(adapter);
 
-        editText = (EditText) findViewById(R.id.editText);
-        editText.setText(sp.getString("yuebaoIncreaseAmount", "20000000"));
-
-        editText2 = (EditText) findViewById(R.id.editText2);
-        editText2.setText(sp.getString("yuebaoTotalProfit", "172823.23"));
-
-        switchBackground = (Switch) findViewById(R.id.switchBackground);
-        if (sp.getString("enableBackground", "true").equals("true"))
-            switchBackground.setChecked(true);
-        switchYuEBao = (Switch) findViewById(R.id.switchYuEBao);
-        if (sp.getString("enableYuEBao", "true").equals("true"))
-            switchYuEBao.setChecked(true);
-
-        switchYuEBao.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                editor.putString("enableYuEBao", Boolean.toString(isChecked).toLowerCase());
-                editor.apply();
-            }
-        });
-
-        switchBackground.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                editor.putString("enableBackground", Boolean.toString(isChecked).toLowerCase());
-                editor.apply();
-            }
-        });
-
-
-
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.length() != 0) {
-                    editor.putString("yuebaoIncreaseAmount", s.toString());
-                    editor.apply();
-                }
-            }
-        });
-
-        editText2.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.length() != 0) {
-                    editor.putString("yuebaoTotalProfit", s.toString());
-                    editor.apply();
-                }
-            }
-        });
     }
 }
