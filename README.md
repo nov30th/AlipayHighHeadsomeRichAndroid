@@ -60,7 +60,4 @@ z02.0003|皮肤子目录|付款码卡头右侧水印
 <a href="Screenshot_Alipay_Yuebao.png"><img src="Screenshot_Alipay_Yuebao.png" height="600" alt="余额宝显示" /></a>
 <a href="Screenshot_Alipay_Diamond.jpg"><img src="Screenshot_Alipay_Diamond.jpg" height="600" alt="付款时背景" /></a>
 
-## APK
-Download Mirror [下载镜像]: https://hoho.im/2017/08/21/high-headsome-rich-uploaded/
-
 【作者自用】
