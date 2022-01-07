@@ -28,15 +28,15 @@ public class MainActivity extends AppCompatActivity {
         listview = (ListView) findViewById(R.id.listview);
         textView = (TextView) findViewById(R.id.textView2);
 
-        textView.setText("2.3.0 LTW");
+        textView.setText("2.4.0-Beta");
 
         listview.setDividerHeight(0);//屏蔽掉listview的横线
         listview.setDivider(null);
 
         String[] listContent = {"Author: 裘小杰 - hoho.im",
                 "支付宝付款显示钻石会员背景。",
-                "适配支付宝10.2.33后(20210917)，由于共享参数失效导致大众会员问题。",
-                "目前没有会员样式选择，只有钻石付款页面。"
+                "自定义付款码皮肤（可随机变换）.",
+                "没有界面控件，请参考文档操作。",
         };
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 this,
