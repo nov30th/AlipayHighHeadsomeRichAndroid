@@ -1,38 +1,32 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion '27.0.3'
+    compileSdkVersion 30
+//    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "im.hoho.alipayInstallB"
         minSdkVersion 21
-        targetSdkVersion 25
-        versionCode 62
-        versionName "2.4.0-Beta"
+        targetSdkVersion 30
+        versionCode 63
+        versionName "2.4.0-Gamma"
 //        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
+//    buildTypes {
+//        release {
+//            minifyEnabled false
+//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+//        }
+//    }
 }
 
 repositories {
-    jcenter();
+    mavenCentral()
+    maven { url "https://api.xposed.info/" }
 }
 
 dependencies {
-    provided 'de.robv.android.xposed:api:82'
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    //    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
-    //        exclude group: 'com.android.support', module: 'support-annotations'
-    //    })
-    compile 'com.android.support:appcompat-v7:25.4.0'
-    compile 'com.alibaba:fastjson:1.1.72.android'
-
-    //    compile 'com.android.support.constraint:constraint-layout:1.0.2'
-    testCompile 'junit:junit:4.12'
+    compileOnly 'de.robv.android.xposed:api:82'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.alibaba:fastjson:1.1.72.android'
 }
