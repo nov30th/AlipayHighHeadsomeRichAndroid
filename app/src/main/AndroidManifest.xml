@@ -18,7 +18,11 @@
             android:name="xposedminversion"
             android:value="53" />
 
-        <activity android:name="im.hoho.alipayInstallB.MainActivity">
+        <meta-data android:name="xposedscope" android:resource="@array/xposed_scopes" />
+
+
+        <activity android:name="im.hoho.alipayInstallB.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
