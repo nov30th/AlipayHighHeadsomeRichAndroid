@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         listview = (ListView) findViewById(R.id.listview);
         textView = (TextView) findViewById(R.id.textView2);
 
-        textView.setText("2.4.0-Beta");
+        textView.setText("2.4.0-Gamma");
 
         listview.setDividerHeight(0);//屏蔽掉listview的横线
         listview.setDivider(null);
