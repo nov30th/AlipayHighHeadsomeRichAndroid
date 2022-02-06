@@ -4,6 +4,10 @@ Xposed module for Alipay App which makes you barcode payment interface same as D
 
 这是一个Xposed模块，它可以让你的支付宝付款背景为黑色钻石会员样式或自定义皮肤。
 
+*该模块作者仅在Xposed官方及LSPosed官方同步，其他途径下载请自行分析风险。*
+
+*如果下载连接无法访问，可以使用【网易UU加速器】的【学术】加速功能，便可高速下载所有Github资源。*
+
 ## 2022.01功能更新
 新增了自定义皮肤功能，包含随机更换皮肤功能（每次展示二维码随机使用一个自定义皮肤）
 
