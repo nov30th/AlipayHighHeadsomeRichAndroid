@@ -34,7 +34,7 @@ public class PluginMain implements IXposedHookLoadPackage {
 
         if (lpparam.packageName.equals("com.eg.android.AlipayGphone")) {
             XposedBridge.log("Loaded App: " + lpparam.packageName);
-            XposedBridge.log("Powered by HOHO`` 20220107");
+            XposedBridge.log("Powered by HOHO`` 20220216");
 
             XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult",
                     lpparam.classLoader,
