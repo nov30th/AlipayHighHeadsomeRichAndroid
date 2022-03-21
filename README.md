@@ -20,7 +20,7 @@ Xposed module for Alipay App which makes you barcode payment interface same as D
 ### 目录结构说明
 
 命名|所属目录|含义|是否目录|手动创建|作用后文件消失
----|---|---|---|---|---
+-------|--------------------|-------------|---|---|---
 actived|000_HOHO_ALIPAY_SKIN|开启自定义皮肤功能|随意|是|否
 update|000_HOHO_ALIPAY_SKIN|触发支付宝增量自定义皮肤缓存|随意|是|是
 delete|000_HOHO_ALIPAY_SKIN|触发支付宝删除自定义皮肤缓存|随意|是|是
@@ -36,7 +36,7 @@ delete|000_HOHO_ALIPAY_SKIN|触发支付宝删除自定义皮肤缓存|随意|�
 > 多个皮肤之间随机数切换，没有去重，看你手机心情展示。
 
 内容|所属目录|含义
----|---|---
+--------|---------|---------
 z01.0001|皮肤子目录|付款码背景
 z02.0001|皮肤子目录|付款码卡头背景颜色
 z02.0002|皮肤子目录|付款码卡头中间logo
@@ -49,6 +49,14 @@ z02.0003|皮肤子目录|付款码卡头右侧水印
 <a href="images/IMG_20220107_085742.jpg"><img src="images/IMG_20220107_085742.jpg" height="600" /></a>
 <a href="images/IMG_20220107_085805.jpg"><img src="images/IMG_20220107_085805.jpg" height="600" /></a>
 <a href="images/IMG_20220107_085719.jpg"><img src="images/IMG_20220107_085719.jpg" height="600" /></a>
+
+## 快速手机修改背景步骤
+1. 打开任意目录下background_2x1.png文件，修改图片为手机分辨率大小并替换图片。也可直接替换文件。
+> <a href="images/ps_bg.png"><img src="images/ps_bg.png" height="600" /></a>
+2. 在000_HOHO_ALIPAY_SKIN目录下创建delete与update两个文件夹。
+3. 打开支付宝付款码即可看到效果如图。
+> <a href="images/final_code.png"><img src="images/final_code.png" height="600" /></a>
+4. 其他界面内元素同样。如不希望随机界面，删除000_HOHO_ALIPAY_SKIN下其他皮肤目录后，同样创建创建delete与update两个文件夹触发更新。
 
 ## 2021.09更新
 由于共享参数设置问题，之前版本在新版支付宝下会始终为默认初始大众会员。
