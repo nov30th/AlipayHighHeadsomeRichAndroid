@@ -16,7 +16,7 @@ Xposed module for Alipay App which makes you barcode payment interface same as D
 ### 自定义皮肤说明
 - 更新装X模块2.4.0版本。
 - 手动下载DEMO资源包，放入SD卡根目录既可。(**[SD CARD]**\000_HOHO_ALIPAY_SKIN)
-
+- **更新支付宝或者清除支付宝缓存后，需要在000_HOHO_ALIPAY_SKIN重新创建update文件夹（或文件）以更新缓存。**
 ### 目录结构说明
 
 命名|所属目录|含义|是否目录|手动创建|作用后文件消失
