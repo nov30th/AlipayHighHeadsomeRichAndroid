@@ -1,17 +1,18 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 33
 //    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "im.hoho.alipayInstallB"
         minSdkVersion 21
-        targetSdkVersion 30
-        versionCode 63
-        versionName "2.4.0-Gamma"
+        targetSdkVersion 33
+        versionCode 101
+        versionName "2.4.2"
 //        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+    namespace 'im.hoho.alipayInstallB'
 //    buildTypes {
 //        release {
 //            minifyEnabled false
