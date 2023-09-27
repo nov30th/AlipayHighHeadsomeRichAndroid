@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
         listview.setDividerHeight(0);//屏蔽掉listview的横线
         listview.setDivider(null);
 
-        String[] listContent = {"Author: 裘小杰 - hoho.im",
+        String[] listContent = {"Author: 裘小杰 - hoho.im 杭州亚运会版",
                 "支付宝付款显示钻石会员背景。",
                 "自定义付款码皮肤（可随机变换）.",
                 "没有界面控件，请参考文档操作。",
