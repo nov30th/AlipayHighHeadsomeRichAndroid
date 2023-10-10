@@ -6,6 +6,14 @@ Xposed module for Alipay App which makes you barcode payment interface same as D
 
 *该模块作者仅在Xposed官方及LSPosed官方同步，其他途径下载请自行分析风险。*
 
+### 界面
+
+欢迎PR界面操作，比如下载SD.zip文件以及权限Require,由于作者并不是专业Android开发，针对SDK API 23及其他尝试了一些放弃了界面傻瓜操作。
+
+另外觉得好用请右上角Star ❥这个Repo，^_^
+
+### 版本
+
 |版本|功能|最后更新时间|是否可用
 |---|---|---|---|
 2.2.8|余额宝修改及收益自动计算、 自由选择支付宝付款码背景|2018.06|<=10.0.12
