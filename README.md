@@ -50,11 +50,6 @@ export|000_HOHO_ALIPAY_SKIN|导出支付宝拥有皮肤|随意|是|是
 
 ***资源包已经包含3个作者画的DEMO与简单的PSD文件，请自行研究。***
 
-<a href="images/IMG_20220107_085600.jpg"><img src="images/IMG_20220107_085600.jpg" height="600" /></a>
-<a href="images/IMG_20220107_085742.jpg"><img src="images/IMG_20220107_085742.jpg" height="600" /></a>
-<a href="images/IMG_20220107_085805.jpg"><img src="images/IMG_20220107_085805.jpg" height="600" /></a>
-<a href="images/IMG_20220107_085719.jpg"><img src="images/IMG_20220107_085719.jpg" height="600" /></a>
-
 ## 快速手机修改背景步骤
 1. 打开任意目录下background_2x1.png文件，修改图片为手机分辨率大小并替换图片。也可直接替换文件。
 > <a href="images/ps_bg.png"><img src="images/ps_bg.png" height="600" /></a>
