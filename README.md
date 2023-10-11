@@ -52,10 +52,10 @@ export|000_HOHO_ALIPAY_SKIN|导出支付宝拥有皮肤|随意|是|是
 
 ## 快速手机修改背景步骤
 1. 打开任意目录下background_2x1.png文件，修改图片为手机分辨率大小并替换图片。也可直接替换文件。
-> <a href="images/ps_bg.png"><img src="images/ps_bg.png" height="600" /></a>
+> <img src="https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/images/ps_bg.png" height="600" />
 2. 在000_HOHO_ALIPAY_SKIN目录下创建delete与update两个文件夹。
 3. 打开支付宝付款码即可看到效果如图。
-> <a href="images/final_code.png"><img src="images/final_code.png" height="600" /></a>
+> <img src="https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/images/final_code.png" height="600" />
 4. 其他界面内元素同样。如不希望随机界面，删除000_HOHO_ALIPAY_SKIN下其他皮肤目录后，同样创建创建delete与update两个文件夹触发更新。
 
 ## 更新历史
