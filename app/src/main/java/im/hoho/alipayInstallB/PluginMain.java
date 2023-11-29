@@ -24,6 +24,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  */
 public class PluginMain implements IXposedHookLoadPackage {
 
+    private static final String packageName = "com.eg.android.AlipayGphone";
+
     public PluginMain() {
         XposedBridge.log("Now Loading HOHO`` alipay plugin...");
     }
@@ -31,10 +33,9 @@ public class PluginMain implements IXposedHookLoadPackage {
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
 
-
-        if (lpparam.packageName.equals("com.eg.android.AlipayGphone")) {
+        if (lpparam.packageName.equals(packageName)) {
             XposedBridge.log("Loaded App: " + lpparam.packageName);
-            XposedBridge.log("Powered by HOHO`` 20230927 杭州亚运会版");
+            XposedBridge.log("Powered by HOHO`` 20230927 杭州亚运会版 sd source changed 20231129");
 
             XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {
@@ -53,8 +54,7 @@ public class PluginMain implements IXposedHookLoadPackage {
             });
 
             //region modify skin
-
-            final Class<?> ConfigUtilBiz = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz");
+//            final Class<?> ConfigUtilBiz = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz");
             final Class<?> OspSkinModel = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.skin.OspSkinModel");
 
             XposedHelpers.findAndHookMethod("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz", lpparam.classLoader, "getFacePaySkinModel", new XC_MethodHook() {
@@ -134,13 +134,18 @@ public class PluginMain implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 
-                    String fixedPathInAliData = "/data/data/com.eg.android.AlipayGphone/files/onsitepay_skin_dir/HOHO";
-                    String alipaySkinsRoot = "/data/data/com.eg.android.AlipayGphone/files/onsitepay_skin_dir";
+                    String fixedPathInAliData = "/data/data/" + packageName + "/files/onsitepay_skin_dir/HOHO";
+                    String alipaySkinsRoot = "/data/data/" + packageName + "/files/onsitepay_skin_dir";
 //                    XposedBridge.log("DEBUG: fixedPathInAliData: " + fixedPathInAliData);
                     File hohoSkinFileInAliData = new File(fixedPathInAliData);
 
-                    String fixedPathUpdates = Environment.getExternalStorageDirectory() + "/000_HOHO_ALIPAY_SKIN";
-//                    XposedBridge.log("DEBUG: skin SD card path: " + fixedPathUpdates);
+                    String basePathUpdates = Environment.getExternalStorageDirectory() + "/Android/media/" + packageName;
+                    if (!new File(basePathUpdates).exists()) {
+                        XposedBridge.log("DEBUG: creating skin SD card path: " + basePathUpdates);
+                        // create dir
+                        new File(basePathUpdates).mkdirs();
+                    }
+                    String fixedPathUpdates = basePathUpdates + "/000_HOHO_ALIPAY_SKIN";
 
                     File skinActived = new File(fixedPathUpdates + "/actived");
                     File skinUpdateRequired = new File(fixedPathUpdates + "/update");
