@@ -19,6 +19,9 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import android.content.Context;
+import android.os.Bundle;
+import android.database.sqlite.SQLiteDatabase;
 /**
  * Created by qzj_ on 2016/5/9.
  */
@@ -52,6 +55,30 @@ public class PluginMain implements IXposedHookLoadPackage {
                     }
                 }
             });
+
+            XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Context context = (Context) param.thisObject; // 获取到Activity作为Context
+                    XposedBridge.log("--------------DATABASE_UPDATER--------------");
+                    File dbFile = context.getDatabasePath("alipayclient.db");
+                    if (dbFile.exists()) {
+                        XposedBridge.log("GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile());
+                        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null, SQLiteDatabase.OPEN_READWRITE))
+                        {
+                            // 将本来的普通会员直接替换为钻石会员
+                            db.execSQL("UPDATE 'main'.'userinfo' SET 'memberGrade' = 'diamond'");
+                            XposedBridge.log("Database update successful!");
+                        } catch (Exception e) {
+                            XposedBridge.log("Database update error: " + e);
+                        }
+                    }else{
+                        XposedBridge.log("CAN NOT GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile()+",PASS!");
+                    }
+                    XposedBridge.log("--------------DATABASE_UPDATER--------------");
+                }
+            });
+
 
             //region modify skin
 //            final Class<?> ConfigUtilBiz = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz");
