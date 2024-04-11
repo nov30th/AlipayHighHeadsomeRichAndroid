@@ -1,5 +1,8 @@
 package im.hoho.alipayInstallB;
 
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.Bundle;
 import android.os.Environment;
 
 import com.alibaba.fastjson.JSON;
@@ -19,9 +22,6 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-import android.content.Context;
-import android.os.Bundle;
-import android.database.sqlite.SQLiteDatabase;
 /**
  * Created by qzj_ on 2016/5/9.
  */
@@ -39,6 +39,7 @@ public class PluginMain implements IXposedHookLoadPackage {
         if (lpparam.packageName.equals(packageName)) {
             XposedBridge.log("Loaded App: " + lpparam.packageName);
             XposedBridge.log("Powered by HOHO`` 20230927 杭州亚运会版 sd source changed 20231129");
+            final boolean[] isDbUpdated = {false};
 
             XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {
@@ -46,10 +47,10 @@ public class PluginMain implements IXposedHookLoadPackage {
                     String diamond = "diamond";
                     Map<String, String> map = (Map) param1MethodHookParam.getResult();
                     if (map.containsKey("memberGrade")) {
-                        XposedBridge.log("Original member grade: " + (String) map.get("memberGrade"));
+                        XposedBridge.log("Original member grade: " + map.get("memberGrade"));
                         XposedBridge.log("Putting " + diamond + " into dict...");
                         map.put("memberGrade", diamond);
-                        XposedBridge.log("Member grade changed to: " + (String) map.get("memberGrade"));
+                        XposedBridge.log("Member grade changed to: " + map.get("memberGrade"));
                     } else {
                         XposedBridge.log("Can not get the member grade in return value...WTF?");
                     }
@@ -59,23 +60,26 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    if (isDbUpdated[0]) {
+                        return;
+                    }
                     Context context = (Context) param.thisObject; // 获取到Activity作为Context
                     XposedBridge.log("--------------DATABASE_UPDATER--------------");
                     File dbFile = context.getDatabasePath("alipayclient.db");
                     if (dbFile.exists()) {
                         XposedBridge.log("GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile());
-                        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null, SQLiteDatabase.OPEN_READWRITE))
-                        {
+                        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null, SQLiteDatabase.OPEN_READWRITE)) {
                             // 将本来的普通会员直接替换为钻石会员
                             db.execSQL("UPDATE 'main'.'userinfo' SET 'memberGrade' = 'diamond'");
                             XposedBridge.log("Database update successful!");
                         } catch (Exception e) {
                             XposedBridge.log("Database update error: " + e);
                         }
-                    }else{
-                        XposedBridge.log("CAN NOT GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile()+",PASS!");
+                    } else {
+                        XposedBridge.log("CAN NOT GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile() + ", Ignore!");
                     }
                     XposedBridge.log("--------------DATABASE_UPDATER--------------");
+                    isDbUpdated[0] = true;
                 }
             });
 
