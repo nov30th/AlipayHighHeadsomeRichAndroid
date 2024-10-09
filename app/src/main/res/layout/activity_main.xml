@@ -6,12 +6,28 @@
     android:padding="16dp">
 
     <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal"
+    android:text="Copyright © Nov30th, HOHO, 裘小杰"
+    android:layout_marginBottom="8dp"/>
+
+    <TextView
         android:id="@+id/tvVersion"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="Version: 2.5.1"
+        android:text="Version: "
         android:layout_marginBottom="24dp"/>
+
+    <!-- <TextView
+        android:id="@+id/tvPluginStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="插件：未加载"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/> -->
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -107,7 +123,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Download Resources"/>
+            android:text="Download Resources (Github)" />
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -118,5 +134,31 @@
             android:layout_gravity="center_vertical"
             android:visibility="gone"/>
     </LinearLayout>
+
+    <!-- 新添加的打开资源文件夹按钮 -->
+    <Button
+    android:id="@+id/btnOpenResourceFolder"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="Open Resource Folder"
+    android:layout_marginTop="16dp"/>
+
+    <!-- 新添加的 GitHub 链接 -->
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SD CARD/Android/media/com.eg.android.AlipayGphone/" />
+
+    <TextView
+        android:id="@+id/tvGithubLink"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GITHUB REPO / 说明 / 项目源码"
+        android:textColor="#0000FF"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:clickable="true"
+        android:focusable="true"/>
 
 </LinearLayout>

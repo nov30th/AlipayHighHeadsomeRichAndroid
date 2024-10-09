@@ -1,6 +1,7 @@
 package im.hoho.alipayInstallB;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Environment;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -26,12 +28,14 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * Created by qzj_ on 2016/5/9.
  */
 public class PluginMain implements IXposedHookLoadPackage {
+    public static volatile boolean isModuleLoaded = false;
 
     private static final String packageName = "com.eg.android.AlipayGphone";
-
     public PluginMain() {
         XposedBridge.log("Now Loading HOHO`` alipay plugin...");
     }
+
+
 
     @Override
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -40,6 +44,9 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedBridge.log("Loaded App: " + lpparam.packageName);
             XposedBridge.log("Powered by HOHO`` 20230927 杭州亚运会版 sd source changed 20231129");
             final boolean[] isDbUpdated = {false};
+
+            // 设置插件已加载状态
+            isModuleLoaded = true;
 
             XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {

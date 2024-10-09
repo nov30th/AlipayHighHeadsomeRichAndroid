@@ -2,8 +2,10 @@ package im.hoho.alipayInstallB;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,11 +24,8 @@ import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
@@ -50,7 +49,7 @@ public class MainActivity extends Activity {
     private ProgressBar progressBar;
     private ExecutorService executorService;
     private Handler mainHandler;
-
+//    private TextView tvPluginStatus;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -64,11 +63,20 @@ public class MainActivity extends Activity {
             }
         }
     }
+//
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        updatePluginStatus();
+//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+//        tvPluginStatus = findViewById(R.id.tvPluginStatus);
+//        updatePluginStatus();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
@@ -113,6 +121,49 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 downloadAndExtract();
+            }
+        });
+
+        Button btnOpenResourceFolder = findViewById(R.id.btnOpenResourceFolder);
+        TextView tvGithubLink = findViewById(R.id.tvGithubLink);
+
+        btnOpenResourceFolder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File resourceFolder = new File(EXTRACT_PATH + "000_HOHO_ALIPAY_SKIN");
+                if (resourceFolder.exists() && resourceFolder.isDirectory()) {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    Uri uri = Uri.parse(resourceFolder.getAbsolutePath());
+                    intent.setDataAndType(uri, "*/*");
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+
+                    try {
+                        startActivity(Intent.createChooser(intent, "选择文件浏览器"));
+                    } catch (ActivityNotFoundException e) {
+                        // 如果没有找到文件管理器应用，尝试使用 ACTION_VIEW
+                        intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(uri, "resource/folder");
+
+                        if (intent.resolveActivityInfo(getPackageManager(), 0) != null) {
+                            startActivity(intent);
+                        } else {
+                            Toast.makeText(MainActivity.this, "没有找到文件浏览器应用", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                } else {
+                    Toast.makeText(MainActivity.this, "Resource package not installed", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        tvGithubLink.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String url = "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid";
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(url));
+                startActivity(intent);
             }
         });
 
@@ -163,6 +214,13 @@ public class MainActivity extends Activity {
         Toast.makeText(this, "Reopen payment code to take effect", Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateStatuses();
+        updateDownloadButtonText();
+    }
+
     private void updateStatuses() {
         updateStatus(ivExportStatus, EXPORT_FILE);
         updateStatus(ivDeleteStatus, DELETE_FILE);
@@ -178,7 +236,7 @@ public class MainActivity extends Activity {
 
     private void updateDownloadButtonText() {
         File skinFolder = new File(EXTRACT_PATH + "000_HOHO_ALIPAY_SKIN");
-        btnDownload.setText(skinFolder.exists() ? "Redownload Resources" : "Download Resources");
+        btnDownload.setText(skinFolder.exists() ? "Redownload Resources (GITHUB)" : "Download Resources (GITHUB)");
     }
 
     private void downloadAndExtract() {
