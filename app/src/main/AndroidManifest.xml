@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 添加读写外部存储的权限 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- 添加网络权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 对于 Android 11 (API 级别 30) 及以上版本，需要添加以下权限 -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <application
         android:allowBackup="true"
@@ -16,10 +27,12 @@
             android:name="xposedminversion"
             android:value="53" />
 
-        <meta-data android:name="xposedscope" android:resource="@array/xposed_scopes" />
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scopes" />
 
-
-        <activity android:name="im.hoho.alipayInstallB.MainActivity"
+        <activity
+            android:name="im.hoho.alipayInstallB.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
