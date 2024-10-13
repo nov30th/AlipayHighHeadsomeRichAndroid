@@ -2,7 +2,6 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 33
-//    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "im.hoho.alipayInstallB"
@@ -10,16 +9,10 @@ android {
         targetSdkVersion 33
         versionCode 107
         versionName "2.5.4"
-//        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     namespace 'im.hoho.alipayInstallB'
     buildToolsVersion '34.0.0'
-//    buildTypes {
-//        release {
-//            minifyEnabled false
-//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-//        }
-//    }
+
 }
 
 repositories {
