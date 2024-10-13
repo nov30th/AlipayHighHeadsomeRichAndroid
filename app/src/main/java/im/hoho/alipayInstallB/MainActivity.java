@@ -66,12 +66,6 @@ public class MainActivity extends Activity {
             }
         }
     }
-//
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        updatePluginStatus();
-//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
