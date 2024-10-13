@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -14,9 +13,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,13 +45,14 @@ public class MainActivity extends Activity {
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private static final String DOWNLOAD_URL = "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/raw/master/SD%E5%8D%A1%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6%E5%8C%85/SD%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6.zip";
     private static final String EXTRACT_PATH = Environment.getExternalStorageDirectory() + "/Android/media/com.eg.android.AlipayGphone/";
+    private final String[] memberGrades = {"原有", "普通 (primary)", "黄金 (golden)", "铂金 (platinum)", "钻石 (diamond)"};
     private Button btnExport, btnDelete, btnUpdate, btnActivate;
     private ImageView ivExportStatus, ivDeleteStatus, ivUpdateStatus, ivActivateStatus;
     private Button btnDownload;
     private ProgressBar progressBar;
     private ExecutorService executorService;
     private Handler mainHandler;
-//    private TextView tvPluginStatus;
+    private Spinner spinnerMemberGrade;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -75,21 +78,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        tvPluginStatus = findViewById(R.id.tvPluginStatus);
-//        updatePluginStatus();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                intent.setData(uri);
-                startActivity(intent);
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-            }
-        }
+        spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
+        setupMemberGradeSpinner();
 
 
         TextView tvVersion = findViewById(R.id.tvVersion);
@@ -227,7 +217,7 @@ public class MainActivity extends Activity {
         updateStatus(ivUpdateStatus, UPDATE_FILE);
         updateStatus(ivActivateStatus, ACTIVATE_FILE);
 
-        btnActivate.setText(new File(ACTIVATE_FILE).exists() ? "Deactivate" : "Activate");
+        btnActivate.setText(new File(ACTIVATE_FILE).exists() ? "点击禁用皮肤" : "点击启用皮肤");
     }
 
     private void updateStatus(ImageView imageView, String filePath) {
@@ -236,10 +226,23 @@ public class MainActivity extends Activity {
 
     private void updateDownloadButtonText() {
         File skinFolder = new File(EXTRACT_PATH + "000_HOHO_ALIPAY_SKIN");
-        btnDownload.setText(skinFolder.exists() ? "Redownload Resources (GITHUB)" : "Download Resources (GITHUB)");
+        btnDownload.setText(skinFolder.exists() ? "重新下载资源包 (Github) 需要SD卡权限" : "下载资源包 (Github) 需要SD卡权限");
     }
 
     private void downloadAndExtract() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                Uri uri = Uri.fromParts("package", getPackageName(), null);
+                intent.setData(uri);
+                startActivity(intent);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+            }
+        }
+
         btnDownload.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setProgress(0);
@@ -318,5 +321,70 @@ public class MainActivity extends Activity {
         if (executorService != null) {
             executorService.shutdown();
         }
+    }
+
+    private void setupMemberGradeSpinner() {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, memberGrades);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerMemberGrade.setAdapter(adapter);
+
+        // 设置当前选中的等级
+        String currentGrade = getCurrentMemberGrade();
+        int position = adapter.getPosition(currentGrade);
+        spinnerMemberGrade.setSelection(position);
+
+        spinnerMemberGrade.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedGrade = parent.getItemAtPosition(position).toString();
+                updateMemberGrade(selectedGrade);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+    }
+
+    private String getCurrentMemberGrade() {
+        for (String grade : memberGrades) {
+            if (grade.equals("原有")) continue;
+            String folderName = "level_" + grade.split(" ")[1].replace("(", "").replace(")", "");
+            File folder = new File(EXTERNAL_STORAGE_PATH, folderName);
+            if (folder.exists()) {
+                return grade;
+            }
+        }
+        return "原有";
+    }
+
+    private void updateMemberGrade(String selectedGrade) {
+        // 删除所有 level_ 文件夹
+        for (String grade : memberGrades) {
+            if (grade.equals("原有")) continue;
+            String folderName = "level_" + grade.split(" ")[1].replace("(", "").replace(")", "");
+            File folder = new File(EXTERNAL_STORAGE_PATH, folderName);
+            if (folder.exists()) {
+                deleteRecursive(folder);
+            }
+        }
+
+        // 如果选择不是"原有"，创建新的 level_ 文件夹
+        if (!selectedGrade.equals("原有")) {
+            String folderName = "level_" + selectedGrade.split(" ")[1].replace("(", "").replace(")", "");
+            File newFolder = new File(EXTERNAL_STORAGE_PATH, folderName);
+            newFolder.mkdirs();
+        }
+
+        Toast.makeText(this, "会员等级已更新为：" + selectedGrade, Toast.LENGTH_SHORT).show();
+    }
+
+    private void deleteRecursive(File fileOrDirectory) {
+        if (fileOrDirectory.isDirectory()) {
+            for (File child : fileOrDirectory.listFiles()) {
+                deleteRecursive(child);
+            }
+        }
+        fileOrDirectory.delete();
     }
 }

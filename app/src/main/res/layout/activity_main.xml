@@ -6,11 +6,11 @@
     android:padding="16dp">
 
     <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="center_horizontal"
-    android:text="Copyright © Nov30th, HOHO, 裘小杰"
-    android:layout_marginBottom="8dp"/>
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Copyright © Nov30th, HOHO, 裘小杰"
+        android:layout_marginBottom="8dp" />
 
     <TextView
         android:id="@+id/tvVersion"
@@ -18,7 +18,31 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:text="Version: "
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="24dp" />
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="会员等级："
+            android:layout_gravity="center_vertical" />
+
+        <Spinner
+            android:id="@+id/spinnerMemberGrade"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <!-- 在 Spinner 下方添加一个空的 View 来增加间距 -->
+    <!-- 可以根据需要调整高度 -->
+
 
     <!-- <TextView
         android:id="@+id/tvPluginStatus"
@@ -28,6 +52,10 @@
         android:text="插件：未加载"
         android:textStyle="bold"
         android:layout_marginBottom="8dp"/> -->
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -40,14 +68,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Export Skins"/>
+            android:text="导出现有皮肤" />
 
         <ImageView
             android:id="@+id/ivExportStatus"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginLeft="16dp"/>
+            android:layout_marginLeft="16dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -61,14 +89,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Delete Skins"/>
+            android:text="删除皮肤缓存" />
 
         <ImageView
             android:id="@+id/ivDeleteStatus"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginLeft="16dp"/>
+            android:layout_marginLeft="16dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -82,14 +110,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Update Skins"/>
+            android:text="更新皮肤缓存" />
 
         <ImageView
             android:id="@+id/ivUpdateStatus"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginLeft="16dp"/>
+            android:layout_marginLeft="16dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -102,14 +130,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Activate/Deactivate"/>
+            android:text="启用皮肤/禁用皮肤" />
 
         <ImageView
             android:id="@+id/ivActivateStatus"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginLeft="16dp"/>
+            android:layout_marginLeft="16dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -123,7 +151,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Download Resources (Github)" />
+            android:text="下载资源包 (Github) 需要SD卡权限" />
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -132,16 +160,16 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_gravity="center_vertical"
-            android:visibility="gone"/>
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- 新添加的打开资源文件夹按钮 -->
     <Button
-    android:id="@+id/btnOpenResourceFolder"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:text="Open Resource Folder"
-    android:layout_marginTop="16dp"/>
+        android:id="@+id/btnOpenResourceFolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="打开资源文件夹"
+        android:layout_marginTop="16dp" />
 
     <!-- 新添加的 GitHub 链接 -->
     <TextView
@@ -159,6 +187,16 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
         android:clickable="true"
-        android:focusable="true"/>
+        android:focusable="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="16dp" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="当选择等级“原有”时，存在数据库缓存，需要重登账号" />
 
 </LinearLayout>
