@@ -1,7 +1,6 @@
 package im.hoho.alipayInstallB;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,7 +18,6 @@ import java.util.Map;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -28,13 +26,13 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * Created by qzj_ on 2016/5/9.
  */
 public class PluginMain implements IXposedHookLoadPackage {
+    private static final String EXTERNAL_STORAGE_PATH = Environment.getExternalStorageDirectory() + "/Android/media/com.eg.android.AlipayGphone/000_HOHO_ALIPAY_SKIN";
+    private static final String packageName = "com.eg.android.AlipayGphone";
     public static volatile boolean isModuleLoaded = false;
 
-    private static final String packageName = "com.eg.android.AlipayGphone";
     public PluginMain() {
         XposedBridge.log("Now Loading HOHO`` alipay plugin...");
     }
-
 
 
     @Override
@@ -51,13 +49,18 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {
                     XposedBridge.log("Now, let's install B...");
-                    String diamond = "diamond";
                     Map<String, String> map = (Map) param1MethodHookParam.getResult();
                     if (map.containsKey("memberGrade")) {
                         XposedBridge.log("Original member grade: " + map.get("memberGrade"));
-                        XposedBridge.log("Putting " + diamond + " into dict...");
-                        map.put("memberGrade", diamond);
-                        XposedBridge.log("Member grade changed to: " + map.get("memberGrade"));
+
+                        String newGrade = getCurrentMemberGrade();
+                        if (!newGrade.equals("原有")) {
+                            XposedBridge.log("Putting " + newGrade + " into dict...");
+                            map.put("memberGrade", newGrade);
+                            XposedBridge.log("Member grade changed to: " + map.get("memberGrade"));
+                        } else {
+                            XposedBridge.log("Member grade not modified.");
+                        }
                     } else {
                         XposedBridge.log("Can not get the member grade in return value...WTF?");
                     }
@@ -67,7 +70,9 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    if (isDbUpdated[0]) {
+                    String newGrade = getCurrentMemberGrade();
+
+                    if (isDbUpdated[0] || newGrade.equals("原有")) {
                         return;
                     }
                     Context context = (Context) param.thisObject; // 获取到Activity作为Context
@@ -76,8 +81,8 @@ public class PluginMain implements IXposedHookLoadPackage {
                     if (dbFile.exists()) {
                         XposedBridge.log("GET DATABASE: " + context.getDatabasePath("alipayclient.db").getParentFile());
                         try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getPath(), null, SQLiteDatabase.OPEN_READWRITE)) {
-                            // 将本来的普通会员直接替换为钻石会员
-                            db.execSQL("UPDATE 'main'.'userinfo' SET 'memberGrade' = 'diamond'");
+                            // 将本来的普通会员直接替换
+                            db.execSQL("UPDATE 'main'.'userinfo' SET 'memberGrade' = '" + newGrade + "'");
                             XposedBridge.log("Database update successful!");
                         } catch (Exception e) {
                             XposedBridge.log("Database update error: " + e);
@@ -264,5 +269,16 @@ public class PluginMain implements IXposedHookLoadPackage {
             //endregion
         }
 
+    }
+
+    private String getCurrentMemberGrade() {
+        String[] grades = {"primary", "golden", "platinum", "diamond", "unknown"};
+        for (String grade : grades) {
+            File folder = new File(EXTERNAL_STORAGE_PATH, "level_" + grade);
+            if (folder.exists()) {
+                return grade;
+            }
+        }
+        return "原有";
     }
 }
