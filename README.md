@@ -11,6 +11,8 @@ customized skins.
 
 得力于AI的快速发展，作者花了一个晚上时间做了界面，这样操作就方便多了。首次使用点击"Download Resources"包即可。
 
+手动下载地址：[SD资源包](https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/blob/master/SD%E5%8D%A1%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6%E5%8C%85/SD%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6.zip)
+
 另外觉得好用请右上角Star ❥这个Repo，^_^
 
 ### 版本
