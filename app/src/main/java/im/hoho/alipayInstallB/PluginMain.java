@@ -43,29 +43,82 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedBridge.log("Powered by HOHO`` 20230927 杭州亚运会版 sd source changed 20231129");
             final boolean[] isDbUpdated = {false};
 
-            // 设置插件已加载状态
-            isModuleLoaded = true;
-
-            XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
-                protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {
-                    XposedBridge.log("Now, let's install B...");
-                    Map<String, String> map = (Map) param1MethodHookParam.getResult();
-                    if (map.containsKey("memberGrade")) {
-                        XposedBridge.log("Original member grade: " + map.get("memberGrade"));
-
-                        String newGrade = getCurrentMemberGrade();
-                        if (!newGrade.equals("原有")) {
-                            XposedBridge.log("Putting " + newGrade + " into dict...");
-                            map.put("memberGrade", newGrade);
-                            XposedBridge.log("Member grade changed to: " + map.get("memberGrade"));
-                        } else {
-                            XposedBridge.log("Member grade not modified.");
-                        }
-                    } else {
-                        XposedBridge.log("Can not get the member grade in return value...WTF?");
-                    }
+            // 添加对MergeMemberGrade的hook
+            try {
+                Class<?> memberGradeEnumClass = XposedHelpers.findClass("com.alipay.mobile.onsitepay9.utils.MergeMemberGradeEnum", lpparam.classLoader);
+                if (memberGradeEnumClass != null) {
+                    XposedHelpers.findAndHookMethod("com.alipay.mobile.onsitepay9.utils.MergeMemberGradeEnum",
+                            lpparam.classLoader,
+                            "convertMemberGrade",
+                            String.class,
+                            new XC_MethodHook() {
+                                @Override
+                                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                    String newGrade = getCurrentMemberGrade();
+                                    XposedBridge.log("Member grade changing to: " + newGrade);
+                                    if (!newGrade.equals("原有")) {
+                                        switch(newGrade) {
+                                            case "primary":
+                                                param.setResult(XposedHelpers.getStaticObjectField(memberGradeEnumClass, "PRIMARY"));
+                                                break;
+                                            case "golden":
+                                                param.setResult(XposedHelpers.getStaticObjectField(memberGradeEnumClass, "GOLDEN"));
+                                                break;
+                                            case "platinum":
+                                                param.setResult(XposedHelpers.getStaticObjectField(memberGradeEnumClass, "PLATINUM"));
+                                                break;
+                                            case "diamond":
+                                                param.setResult(XposedHelpers.getStaticObjectField(memberGradeEnumClass, "DIAMOND"));
+                                                break;
+                                            default:
+                                                param.setResult(XposedHelpers.getStaticObjectField(memberGradeEnumClass, "NULL"));
+                                                break;
+                                        }
+                                        XposedBridge.log("Member grade changed to: " + newGrade);
+                                    }
+                                }
+                            });
+                    XposedBridge.log("convertMemberGrade hooked.");
+                } else {
+                    XposedBridge.log("MergeMemberGradeEnum class not found.");
                 }
-            });
+            } catch (XposedHelpers.ClassNotFoundError e) {
+                XposedBridge.log("MergeMemberGradeEnum class not found: " + e.getMessage());
+            } catch (NoSuchMethodError e) {
+                XposedBridge.log("convertMemberGrade method not found: " + e.getMessage());
+            } catch (Exception e) {
+                XposedBridge.log("Error while hooking convertMemberGrade: " + e.getMessage());
+            }
+
+            try {
+                Class<?> UserLoginResultClass = XposedHelpers.findClass("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader);
+                if (UserLoginResultClass != null) {
+                    XposedHelpers.findAndHookMethod("com.alipay.mobilegw.biz.shared.processer.login.UserLoginResult", lpparam.classLoader, "getExtResAttrs", new XC_MethodHook() {
+                        protected void afterHookedMethod(MethodHookParam param1MethodHookParam) throws Throwable {
+                            XposedBridge.log("Now, let's install B...");
+                            Map<String, String> map = (Map) param1MethodHookParam.getResult();
+                            if (map.containsKey("memberGrade")) {
+                                XposedBridge.log("Original member grade: " + map.get("memberGrade"));
+
+                                String newGrade = getCurrentMemberGrade();
+                                if (!newGrade.equals("原有")) {
+                                    XposedBridge.log("Putting " + newGrade + " into dict...");
+                                    map.put("memberGrade", newGrade);
+                                    XposedBridge.log("Member grade changed to: " + map.get("memberGrade"));
+                                } else {
+                                    XposedBridge.log("Member grade not modified.");
+                                }
+                            } else {
+                                XposedBridge.log("Can not get the member grade in return value...WTF?");
+                            }
+                        }
+                    });
+                } else {
+                    XposedBridge.log("UserLoginResult class not found.");
+                }
+            } catch (Exception e) {
+                XposedBridge.log("UserLoginResult class not found.");
+            }
 
             XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override
