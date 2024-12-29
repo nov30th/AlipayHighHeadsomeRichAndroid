@@ -2,8 +2,11 @@ package im.hoho.alipayInstallB;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -54,6 +57,9 @@ public class MainActivity extends Activity {
     private Handler mainHandler;
     private Spinner spinnerMemberGrade;
 
+    private static final String PREFS_NAME = "AppPreferences";
+    private static final String KEY_FIRST_RUN = "isFirstRun";
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PERMISSION_REQUEST_CODE) {
@@ -70,6 +76,30 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 检查是否首次运行
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        boolean isFirstRun = settings.getBoolean(KEY_FIRST_RUN, true);
+
+        if (isFirstRun) {
+            new AlertDialog.Builder(this)
+                    .setTitle("隐私说明")
+                    .setMessage("本应用不会收集、不会上传任何用户信息或使用数据。\n\n" +
+                            "应用仅在本地运行，不会与任何服务器通信（除非您主动点击\"下载资源包\"按钮从 Github 下载资源）。\n\n" +
+                            "所有操作均在您的设备本地完成，请放心使用。")
+                    .setPositiveButton("我知道了", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // 标记已经显示过隐私说明
+                            SharedPreferences.Editor editor = settings.edit();
+                            editor.putBoolean(KEY_FIRST_RUN, false);
+                            editor.apply();
+                        }
+                    })
+                    .setCancelable(false)
+                    .show();
+        }
+
         setContentView(R.layout.activity_main);
 
         spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
