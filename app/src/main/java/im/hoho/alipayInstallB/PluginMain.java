@@ -217,8 +217,9 @@ public class PluginMain implements IXposedHookLoadPackage {
                     for (int i = 0; i < files.length; i++) {
                         File f = files[i];
                         if (f.isDirectory()) {
-                            if (f.getName().equals("update") || f.getName().equals("actived") || f.getName().equals("delete"))
+                            if (f.getName().equals("update") || f.getName().equals("actived") || f.getName().equals("delete") || f.getName().startsWith("level_")) {
                                 continue;
+                            }
                             String filename = f.getName();
                             resultList.add(f.getName());
                         }
