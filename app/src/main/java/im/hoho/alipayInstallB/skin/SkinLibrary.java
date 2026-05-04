@@ -1,7 +1,9 @@
 package im.hoho.alipayInstallB.skin;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -124,6 +126,74 @@ public final class SkinLibrary {
         ensureRoot();
         File f = SkinPaths.exportFlag();
         if (!f.exists()) f.mkdirs();
+    }
+
+    /**
+     * 创建 theme_export 标记。Hook 在下次打开支付宝时导出当前账号的 app 主题。
+     */
+    public static void requestThemeExport() {
+        ensureRoot();
+        File f = SkinPaths.themeExportFlag();
+        if (!f.exists()) f.mkdirs();
+    }
+
+    public static void saveSelectedTheme(String dirName) throws IOException {
+        ensureRoot();
+        if (dirName == null || dirName.trim().isEmpty()) {
+            if (SkinPaths.selectedThemeFile().exists()) SkinPaths.selectedThemeFile().delete();
+            return;
+        }
+        File dir = new File(SkinPaths.themesDir(), dirName);
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new IOException("主题不存在: " + dirName);
+        }
+        try (FileOutputStream out = new FileOutputStream(SkinPaths.selectedThemeFile())) {
+            out.write(dirName.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    public static String readSelectedTheme() {
+        File f = SkinPaths.selectedThemeFile();
+        if (!f.exists() || !f.isFile()) return null;
+        try {
+            byte[] bytes = SkinIO.readAllBytes(f);
+            String s = new String(bytes, StandardCharsets.UTF_8).trim();
+            return s.isEmpty() ? null : s;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static void requestThemeUpdate() {
+        ensureRoot();
+        File f = SkinPaths.themeUpdateFlag();
+        if (!f.exists()) f.mkdirs();
+    }
+
+    public static boolean isThemeUpdatePending() {
+        return SkinPaths.themeUpdateFlag().exists();
+    }
+
+    public static boolean deleteTheme(String dirName) {
+        if (dirName == null || SkinPaths.isReservedName(dirName)) return false;
+
+        File d = new File(SkinPaths.themesDir(), dirName);
+        boolean ok = !d.exists() || SkinIO.deleteRecursive(d);
+
+        String selected = readSelectedTheme();
+        if (dirName.equals(selected)) {
+            try {
+                saveSelectedTheme(null);
+            } catch (IOException ignored) {
+            }
+            File update = SkinPaths.themeUpdateFlag();
+            if (update.exists()) SkinIO.deleteRecursive(update);
+        }
+
+        File z = new File(SkinPaths.exportsDir(), SkinIO.sanitizeFilename(dirName) + ".zip");
+        if (z.exists()) z.delete();
+
+        return ok;
     }
 
     public static boolean isActived() {
@@ -308,6 +378,32 @@ public final class SkinLibrary {
         }
         String safe = SkinIO.sanitizeFilename(dirName);
         if (safe.isEmpty()) safe = "skin";
+        File zip = new File(dir, safe + ".zip");
+        try {
+            SkinIO.zipDirectory(src, zip);
+        } catch (IOException e) {
+            return ExportResult.fail("打包失败: " + e.getMessage());
+        }
+        return ExportResult.ok(zip);
+    }
+
+    /**
+     * 导出主题到 exports/<sanitized>.zip。已存在则覆盖。
+     */
+    public static ExportResult exportThemeZip(String dirName) {
+        if (dirName == null || SkinPaths.isReservedName(dirName)) {
+            return ExportResult.fail("非法主题名");
+        }
+        File src = new File(SkinPaths.themesDir(), dirName);
+        if (!src.exists() || !src.isDirectory()) {
+            return ExportResult.fail("主题不存在: " + dirName);
+        }
+        File dir = SkinPaths.exportsDir();
+        if (!dir.exists() && !dir.mkdirs()) {
+            return ExportResult.fail("无法创建 exports 目录");
+        }
+        String safe = SkinIO.sanitizeFilename(dirName);
+        if (safe.isEmpty()) safe = "theme";
         File zip = new File(dir, safe + ".zip");
         try {
             SkinIO.zipDirectory(src, zip);
