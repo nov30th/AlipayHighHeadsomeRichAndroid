@@ -3,10 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="82dp"
+    android:background="?attr/selectableItemBackground"
     android:orientation="vertical"
-    android:paddingHorizontal="22dp"
-    android:paddingVertical="14dp">
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="16dp">
 
     <TextView
         android:id="@+id/tvRemoteSkinName"
@@ -14,29 +14,27 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#222222"
-        android:textSize="16sp"
-        android:textStyle="bold"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
         tools:text="阿狸-新春花灯会" />
 
     <TextView
         android:id="@+id/tvRemoteSkinDescription"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:textColor="#666666"
-        android:textSize="14sp"
+        android:layout_marginTop="4dp"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="财富黑卡专享支付宝皮肤" />
 
     <TextView
         android:id="@+id/tvRemoteSkinFile"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
+        android:layout_marginTop="8dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textColor="#999999"
-        android:textSize="12sp"
+        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+        android:textColor="?attr/colorOutline"
         tools:text="Ali.zip" />
 
 </LinearLayout>

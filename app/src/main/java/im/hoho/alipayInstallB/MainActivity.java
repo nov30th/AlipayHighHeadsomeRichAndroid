@@ -2,7 +2,6 @@ package im.hoho.alipayInstallB;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -17,18 +16,18 @@ import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
+import android.widget.AutoCompleteTextView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -36,7 +35,11 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.bumptech.glide.Glide;
-import com.google.android.material.button.MaterialButton;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -66,9 +69,12 @@ public class MainActivity extends Activity {
     private TextView tvEmpty;
     private final List<SkinModel> skinList = new ArrayList<>();
     private SkinAdapter skinAdapter;
-    private MaterialButton btnUpdate, btnActivate, btnDownload, btnImportZip, btnDelete, btnExportBuiltin;
-    private ProgressBar progressBar;
-    private Spinner spinnerMemberGrade;
+    
+    private MaterialToolbar toolbar;
+    private MaterialSwitch btnActivate;
+    private ExtendedFloatingActionButton fabAdd;
+    private AutoCompleteTextView spinnerMemberGrade;
+    
     private ExecutorService executorService;
     private Handler mainHandler;
 
@@ -175,23 +181,24 @@ public class MainActivity extends Activity {
             holder.cbSelected.setChecked(skin.isSelected);
             holder.cbSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 skin.isSelected = isChecked;
-                persistSelection();
+                persistSelectionAndRequestCacheUpdate("已计划更新缓存，重启支付宝付款码生效");
                 holder.tvActiveBadge.setVisibility(skin.isSelected && SkinLibrary.isActived() ? View.VISIBLE : View.GONE);
             });
 
             int color;
             try {
-                color = Color.parseColor(skin.themeColor != null ? skin.themeColor : "#108EE9");
+                color = Color.parseColor(skin.themeColor != null ? skin.themeColor : "#1677FF");
             } catch (Exception e) {
-                color = Color.parseColor("#108EE9");
+                color = Color.parseColor("#1677FF");
             }
             holder.viewThemeAccent.setBackgroundColor(color);
-            holder.cbSelected.setButtonTintList(android.content.res.ColorStateList.valueOf(color));
+            holder.tvActiveBadge.setChipBackgroundColorResource(android.R.color.transparent);
+            holder.tvActiveBadge.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(color));
 
             if (skin.bgPath != null) {
                 Glide.with(MainActivity.this).load(new File(skin.bgPath)).into(holder.ivBackground);
             } else {
-                holder.ivBackground.setImageResource(android.R.drawable.ic_menu_gallery);
+                holder.ivBackground.setImageResource(android.R.drawable.screen_background_light);
             }
 
             if (skin.logoPath != null) {
@@ -209,8 +216,18 @@ public class MainActivity extends Activity {
             }
 
             holder.tvActiveBadge.setVisibility(skin.isSelected && SkinLibrary.isActived() ? View.VISIBLE : View.GONE);
-            holder.btnExportItem.setOnClickListener(v -> exportSkin(skin));
-            holder.btnDeleteItem.setOnClickListener(v -> confirmDeleteSkin(skin));
+            
+            holder.btnMore.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(MainActivity.this, holder.btnMore);
+                popup.getMenu().add(0, 1, 0, "导出为 Zip");
+                popup.getMenu().add(0, 2, 0, "删除皮肤");
+                popup.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == 1) exportSkin(skin);
+                    else if (item.getItemId() == 2) confirmDeleteSkin(skin);
+                    return true;
+                });
+                popup.show();
+            });
         }
 
         @Override
@@ -219,14 +236,17 @@ public class MainActivity extends Activity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
+            com.google.android.material.card.MaterialCardView cardRoot;
             ImageView ivBackground, ivLogo, ivMask;
-            TextView tvSkinName, tvSkinPath, tvActiveBadge;
-            CheckBox cbSelected;
-            ImageButton btnExportItem, btnDeleteItem;
+            TextView tvSkinName, tvSkinPath;
+            Chip tvActiveBadge;
+            MaterialSwitch cbSelected;
+            ImageButton btnMore;
             View viewThemeAccent;
 
             ViewHolder(View view) {
                 super(view);
+                cardRoot = view.findViewById(R.id.cardRoot);
                 ivBackground = view.findViewById(R.id.ivBackground);
                 ivLogo = view.findViewById(R.id.ivLogo);
                 ivMask = view.findViewById(R.id.ivMask);
@@ -234,8 +254,7 @@ public class MainActivity extends Activity {
                 tvSkinPath = view.findViewById(R.id.tvSkinPath);
                 tvActiveBadge = view.findViewById(R.id.tvActiveBadge);
                 cbSelected = view.findViewById(R.id.cbSelected);
-                btnExportItem = view.findViewById(R.id.btnExportItem);
-                btnDeleteItem = view.findViewById(R.id.btnDeleteItem);
+                btnMore = view.findViewById(R.id.btnMore);
                 viewThemeAccent = view.findViewById(R.id.viewThemeAccent);
             }
         }
@@ -253,6 +272,23 @@ public class MainActivity extends Activity {
         if (settings.getBoolean(KEY_FIRST_RUN, true)) {
             showPrivacyDialog(settings);
         }
+        
+        toolbar = findViewById(R.id.toolbar);
+        toolbar.inflateMenu(R.menu.main_menu);
+        toolbar.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.action_update_cache) {
+                doRequestUpdate();
+                return true;
+            } else if (id == R.id.action_clear_cache) {
+                confirmClearCache();
+                return true;
+            } else if (id == R.id.action_export_builtin) {
+                doRequestBuiltinExport();
+                return true;
+            }
+            return false;
+        });
 
         spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
         setupMemberGradeSpinner();
@@ -264,13 +300,8 @@ public class MainActivity extends Activity {
         skinAdapter = new SkinAdapter();
         rvSkins.setAdapter(skinAdapter);
 
-        btnUpdate = findViewById(R.id.btnUpdate);
         btnActivate = findViewById(R.id.btnActivate);
-        btnDownload = findViewById(R.id.btnDownload);
-        btnImportZip = findViewById(R.id.btnImportZip);
-        btnDelete = findViewById(R.id.btnDelete);
-        btnExportBuiltin = findViewById(R.id.btnExportBuiltin);
-        progressBar = findViewById(R.id.progressBar);
+        fabAdd = findViewById(R.id.fabAdd);
 
         setupButtons();
 
@@ -301,7 +332,7 @@ public class MainActivity extends Activity {
     }
 
     private void showPrivacyDialog(SharedPreferences settings) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("隐私说明")
                 .setMessage("本应用不会收集、不会上传任何用户信息或使用数据。\n\n应用仅在本地运行，除非您点击\"下载更多\"。")
                 .setPositiveButton("我知道了", (dialog, which) -> settings.edit().putBoolean(KEY_FIRST_RUN, false).apply())
@@ -309,30 +340,41 @@ public class MainActivity extends Activity {
     }
 
     private void setupButtons() {
-        btnUpdate.setOnClickListener(v -> doRequestUpdate());
-        btnActivate.setOnClickListener(v -> toggleActivated());
-        btnDelete.setOnClickListener(v -> confirmClearCache());
-        btnDownload.setOnClickListener(v -> openRemoteSkins());
-        btnImportZip.setOnClickListener(v -> selectZipForImport());
-        btnExportBuiltin.setOnClickListener(v -> doRequestBuiltinExport());
+        btnActivate.setOnCheckedChangeListener((v, isChecked) -> {
+            if (SkinLibrary.isActived() != isChecked) {
+                toggleActivated(isChecked);
+            }
+        });
+        
+        fabAdd.setOnClickListener(v -> {
+            String[] options = {"导入本地 Zip", "从 Github 下载更多"};
+            new MaterialAlertDialogBuilder(this)
+                .setTitle("添加皮肤")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) selectZipForImport();
+                    else openRemoteSkins();
+                })
+                .show();
+        });
     }
 
     private void doRequestUpdate() {
-        persistSelection();
-        SkinLibrary.requestCacheUpdate();
-        Toast.makeText(this, "已计划更新缓存，重启支付宝付款码生效", Toast.LENGTH_SHORT).show();
+        persistSelectionAndRequestCacheUpdate("已计划更新缓存，重启支付宝付款码生效");
     }
 
-    private void toggleActivated() {
-        boolean target = !SkinLibrary.isActived();
+    private void toggleActivated(boolean target) {
         SkinLibrary.setActived(target);
         refreshActivateButton();
         skinAdapter.notifyDataSetChanged();
-        Toast.makeText(this, target ? "已启用皮肤替换" : "已临时关闭皮肤替换", Toast.LENGTH_SHORT).show();
+        if (target) {
+            persistSelectionAndRequestCacheUpdate("已启用皮肤替换，已计划更新缓存");
+        } else {
+            Toast.makeText(this, "已临时关闭皮肤替换", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void confirmClearCache() {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("清空 HOHO 缓存")
                 .setMessage("将在下次进入支付宝付款码时清空已下发的皮肤缓存（不影响皮肤库）。继续？")
                 .setPositiveButton("确定", (d, w) -> {
@@ -343,7 +385,7 @@ public class MainActivity extends Activity {
     }
 
     private void doRequestBuiltinExport() {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("导出支付宝内置皮肤")
                 .setMessage("将在下次进入支付宝付款码时，把当前账号已下发的内置皮肤自动写入 skins/ 皮肤库。\n\nzip 不会自动生成；需要在皮肤列表中对单个皮肤点导出，zip 会保存到 exports/ 文件夹。继续？")
                 .setPositiveButton("确定", (d, w) -> {
@@ -354,7 +396,13 @@ public class MainActivity extends Activity {
     }
 
     private void refreshActivateButton() {
-        btnActivate.setText(SkinLibrary.isActived() ? "已启用 (点击关闭)" : "已关闭 (点击启用)");
+        btnActivate.setOnCheckedChangeListener(null);
+        btnActivate.setChecked(SkinLibrary.isActived());
+        btnActivate.setOnCheckedChangeListener((v, isChecked) -> {
+            if (SkinLibrary.isActived() != isChecked) {
+                toggleActivated(isChecked);
+            }
+        });
     }
 
     private void loadSkins() {
@@ -375,27 +423,34 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void persistSelection() {
-        List<String> selected = new ArrayList<>();
-        for (SkinModel skin : skinList) {
-            if (skin.isSelected) selected.add(skin.dirName);
-        }
+    private void persistSelectionAndRequestCacheUpdate(String message) {
+        List<String> selected = snapshotSelectedSkins();
         executorService.execute(() -> {
             try {
                 SkinLibrary.saveSelected(selected);
+                SkinLibrary.requestCacheUpdate();
+                mainHandler.post(() -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show());
             } catch (Exception e) {
                 mainHandler.post(() ->
-                        Toast.makeText(this, "保存选中失败: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                        Toast.makeText(this, "更新缓存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
         });
     }
 
+    private List<String> snapshotSelectedSkins() {
+        List<String> selected = new ArrayList<>();
+        for (SkinModel skin : skinList) {
+            if (skin.isSelected) selected.add(skin.dirName);
+        }
+        return selected;
+    }
+
     private void exportSkin(SkinModel skin) {
-        progressBar.setVisibility(View.VISIBLE);
+        BusyDialog loading = showBusyDialog("导出皮肤", "正在打包 " + skin.displayName + "...", true);
         executorService.execute(() -> {
             SkinLibrary.ExportResult r = SkinLibrary.exportZip(skin.dirName);
             mainHandler.post(() -> {
-                progressBar.setVisibility(View.GONE);
+                loading.dismiss();
                 if (r.success) {
                     Toast.makeText(this, "导出成功: exports/" + r.zipFile.getName(), Toast.LENGTH_LONG).show();
                 } else {
@@ -406,11 +461,12 @@ public class MainActivity extends Activity {
     }
 
     private void confirmDeleteSkin(SkinModel skin) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("删除皮肤")
                 .setMessage("确定删除 \"" + skin.displayName + "\" (" + skin.dirName + ") ？\n同时移除选中和已导出的 zip。")
                 .setPositiveButton("删除", (dialog, which) -> executorService.execute(() -> {
                     boolean ok = SkinLibrary.deleteSkin(skin.dirName);
+                    SkinLibrary.requestCacheUpdate();
                     mainHandler.post(() -> {
                         Toast.makeText(this, ok ? "已删除" : "删除失败", Toast.LENGTH_SHORT).show();
                         loadSkins();
@@ -426,7 +482,7 @@ public class MainActivity extends Activity {
 
     private void requestStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            new AlertDialog.Builder(this)
+            new MaterialAlertDialogBuilder(this)
                     .setTitle("需要存储权限")
                     .setMessage("管理皮肤库需要\"所有文件访问\"权限，请在系统设置中授权。")
                     .setPositiveButton("去授权", (d, w) -> {
@@ -473,7 +529,7 @@ public class MainActivity extends Activity {
     }
 
     private void importFromUri(Uri uri) {
-        progressBar.setVisibility(View.VISIBLE);
+        BusyDialog loading = showBusyDialog("导入皮肤", "正在解压并导入...", true);
         executorService.execute(() -> {
             File tmp = new File(getCacheDir(), "import_" + System.currentTimeMillis() + ".zip");
             try (InputStream is = getContentResolver().openInputStream(uri);
@@ -484,7 +540,7 @@ public class MainActivity extends Activity {
                 while ((r = is.read(buf)) != -1) fos.write(buf, 0, r);
             } catch (Exception e) {
                 mainHandler.post(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    loading.dismiss();
                     Toast.makeText(this, "读取 zip 失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
                 tmp.delete();
@@ -493,7 +549,7 @@ public class MainActivity extends Activity {
             SkinLibrary.ImportResult r = SkinLibrary.importZip(tmp);
             tmp.delete();
             mainHandler.post(() -> {
-                progressBar.setVisibility(View.GONE);
+                loading.dismiss();
                 if (r.success) {
                     Toast.makeText(this, "导入成功: " + r.dirName, Toast.LENGTH_SHORT).show();
                     loadSkins();
@@ -506,23 +562,20 @@ public class MainActivity extends Activity {
 
     private void openRemoteSkins() {
         BusyDialog loading = showBusyDialog(
-                "正在读取在线皮肤 (Github)",
+                "正在读取在线皮肤",
                 "正在连接 Github 并读取皮肤列表，网络较慢时请稍候。",
                 false);
-        btnDownload.setEnabled(false);
         executorService.execute(() -> {
             try {
                 String json = RemoteManifest.downloadManifest(SkinPaths.REMOTE_MANIFEST_URL);
                 RemoteManifest manifest = RemoteManifest.parse(json);
                 mainHandler.post(() -> {
                     loading.dismiss();
-                    btnDownload.setEnabled(true);
                     showRemoteSkinsDialog(manifest);
                 });
             } catch (Exception e) {
                 mainHandler.post(() -> {
                     loading.dismiss();
-                    btnDownload.setEnabled(true);
                     Toast.makeText(this, "连接失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
             }
@@ -538,7 +591,7 @@ public class MainActivity extends Activity {
                 if (msg.length() > 0) msg.append("\n\n");
                 msg.append("更新时间: ").append(manifest.notice.updatedAt);
             }
-            new AlertDialog.Builder(this)
+            new MaterialAlertDialogBuilder(this)
                     .setTitle(title)
                     .setMessage(msg.toString())
                     .setPositiveButton("查看皮肤列表", (d, w) -> showRemoteSkinsList(manifest))
@@ -587,7 +640,7 @@ public class MainActivity extends Activity {
                         return view;
                     }
                 };
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("在线皮肤")
                 .setAdapter(adapter, (d, w) -> downloadRemoteSkin(items.get(w)))
                 .setNegativeButton("取消", null)
@@ -632,7 +685,7 @@ public class MainActivity extends Activity {
 
         TextView messageView = new TextView(this);
         messageView.setText(message);
-        messageView.setTextColor(Color.parseColor("#555555"));
+        messageView.setTextColor(Color.parseColor("#777777"));
         messageView.setTextSize(14);
         messageView.setLineSpacing(dp(2), 1.0f);
 
@@ -651,7 +704,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         box.addView(bar, barLp);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(title)
                 .setView(box)
                 .setCancelable(false)
@@ -690,20 +743,12 @@ public class MainActivity extends Activity {
     }
 
     private void setupMemberGradeSpinner() {
-        ArrayAdapter<String> a = new ArrayAdapter<>(this, R.layout.member_grade_spinner_item, memberGrades);
-        a.setDropDownViewResource(R.layout.member_grade_spinner_dropdown_item);
+        ArrayAdapter<String> a = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, memberGrades);
         spinnerMemberGrade.setAdapter(a);
         String g = getCurrentMemberGrade();
-        spinnerMemberGrade.setSelection(a.getPosition(g));
-        spinnerMemberGrade.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
-                updateMemberGrade(p.getItemAtPosition(pos).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> p) {
-            }
+        spinnerMemberGrade.setText(g, false);
+        spinnerMemberGrade.setOnItemClickListener((parent, view, position, id) -> {
+            updateMemberGrade(memberGrades[position]);
         });
     }
 

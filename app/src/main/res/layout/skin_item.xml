@@ -2,82 +2,81 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:strokeColor="#DDDDDD"
-    app:strokeWidth="1dp">
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    style="?attr/materialCardViewElevatedStyle">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Preview Area: Mimicking Alipay Payment Code -->
+        <!-- Preview Image Container -->
         <FrameLayout
-            android:id="@+id/previewContainer"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#EEEEEE">
+            android:layout_height="180dp">
+
             <ImageView
                 android:id="@+id/ivBackground"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="match_parent"
                 android:scaleType="centerCrop"
-                tools:src="@android:drawable/ic_menu_gallery" />
+                tools:src="@android:drawable/screen_background_light" />
 
             <ImageView
                 android:id="@+id/ivMask"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="match_parent"
                 android:scaleType="fitXY"
                 android:visibility="gone" />
 
+            <!-- Gradient Overlay for text readability at bottom -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_gravity="bottom"
+                android:background="@drawable/gradient_overlay" />
+
             <ImageView
                 android:id="@+id/ivLogo"
-                android:layout_width="60dp"
-                android:layout_height="30dp"
+                android:layout_width="80dp"
+                android:layout_height="40dp"
                 android:layout_gravity="top|center_horizontal"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:scaleType="fitCenter" />
-                
-            <View
-                android:id="@+id/viewThemeAccent"
-                android:layout_width="4dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:background="#108EE9" />
 
-            <TextView
+            <com.google.android.material.chip.Chip
                 android:id="@+id/tvActiveBadge"
+                style="@style/Widget.Material3.Chip.Assist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top|end"
+                android:layout_gravity="top|start"
                 android:layout_margin="8dp"
-                android:background="#4CAF50"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:text="ACTIVE"
+                android:text="使用中"
                 android:textColor="#FFFFFF"
-                android:textSize="10sp"
-                android:textStyle="bold"
+                app:chipBackgroundColor="#99000000"
+                app:chipStrokeWidth="0dp"
                 android:visibility="gone" />
+
+            <View
+                android:id="@+id/viewThemeAccent"
+                android:layout_width="6dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:background="#108EE9" />
         </FrameLayout>
 
+        <!-- Controls and Info -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="12dp">
-
-            <CheckBox
-                android:id="@+id/cbSelected"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:buttonTint="#108EE9" />
+            android:padding="16dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -91,38 +90,33 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     tools:text="阿狸-新春花灯会" />
 
                 <TextView
                     android:id="@+id/tvSkinPath"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#999999"
-                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     tools:text="目录: Ali" />
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnExportItem"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Export"
-                android:src="@android:drawable/ic_menu_share"
-                app:tint="#666666" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/cbSelected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp" />
 
             <ImageButton
-                android:id="@+id/btnDeleteItem"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:id="@+id/btnMore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Delete"
-                android:src="@android:drawable/ic_menu_delete"
-                app:tint="#FF5252" />
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_more"
+                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </LinearLayout>
-
 </com.google.android.material.card.MaterialCardView>
