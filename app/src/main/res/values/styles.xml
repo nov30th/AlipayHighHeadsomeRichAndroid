@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#1677FF</item>
+        <item name="colorSecondary">#1677FF</item>
+        <item name="colorTertiary">#00B42A</item>
+        <!-- Use modern card style -->
+        <item name="materialCardViewElevatedStyle">@style/Widget.Material3.CardView.Elevated</item>
     </style>
 </resources>
