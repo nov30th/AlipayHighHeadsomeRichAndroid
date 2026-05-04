@@ -13,7 +13,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.text.Html;
 import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +29,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.text.HtmlCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -340,7 +340,7 @@ public class MainActivity extends Activity {
     }
 
     private void showPrivacyDialog(SharedPreferences settings) {
-        CharSequence message = Html.fromHtml(
+        CharSequence message = HtmlCompat.fromHtml(
                 "<b>欢迎使用支付宝装X模块</b><br/><br/>" +
                 "本应用 <b>默认完全不联网</b>：<br/>" +
                 "&nbsp;&nbsp;• <b>不联网</b>，不发起任何后台网络请求<br/>" +
@@ -349,7 +349,7 @@ public class MainActivity extends Activity {
                 "&nbsp;&nbsp;• 所有皮肤与配置仅保存在本设备<br/><br/>" +
                 "唯一的例外：当您主动点击 <b>添加皮肤 → 从 Github 下载更多</b> 时，应用才会连接 GitHub 获取在线皮肤清单。<br/><br/>" +
                 "<small>项目主页：<a href=\"https://github.com/nov30th/AlipayHighHeadsomeRichAndroid\">nov30th/AlipayHighHeadsomeRichAndroid</a></small>",
-                Html.FROM_HTML_MODE_LEGACY);
+                HtmlCompat.FROM_HTML_MODE_LEGACY);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("🔒 隐私说明")
