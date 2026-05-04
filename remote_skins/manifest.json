@@ -1,0 +1,39 @@
+{
+  "notice": {
+    "title": "皮肤资源说明",
+    "message": "下载的皮肤仅供学习研究使用，请注意版权。本应用不会收集或上传任何信息。",
+    "updatedAt": "2026-05-04"
+  },
+  "skins": [
+    {
+      "name": "阿狸-新春花灯会",
+      "file": "Ali.zip",
+      "description": "阿狸-新春花灯会"
+    },
+    {
+      "name": "财富黑卡新春皮肤",
+      "file": "Alipay_CaifuMember.zip",
+      "description": "财富黑卡新春皮肤"
+    },
+    {
+      "name": "HOHO自定义背景",
+      "file": "hohoColor.zip",
+      "description": "HOHO自定义背景"
+    },
+    {
+      "name": "HOHO自定义背景",
+      "file": "hohoTest.zip",
+      "description": "HOHO自定义背景"
+    },
+    {
+      "name": "HOHO自定义背景",
+      "file": "hohoTest1.zip",
+      "description": "HOHO自定义背景"
+    },
+    {
+      "name": "财富黑卡专享支付宝皮肤",
+      "file": "ltp_caifuheika.zip",
+      "description": "财富黑卡专享支付宝皮肤"
+    }
+  ]
+}
