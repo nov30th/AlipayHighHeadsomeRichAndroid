@@ -275,6 +275,9 @@ public class MainActivity extends Activity {
         
         toolbar = findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.main_menu);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            toolbar.getMenu().setGroupDividerEnabled(true);
+        }
         toolbar.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
             if (id == R.id.action_update_cache) {
@@ -285,6 +288,9 @@ public class MainActivity extends Activity {
                 return true;
             } else if (id == R.id.action_export_builtin) {
                 doRequestBuiltinExport();
+                return true;
+            } else if (id == R.id.action_github) {
+                openProjectHomepage();
                 return true;
             }
             return false;
@@ -393,6 +399,15 @@ public class MainActivity extends Activity {
                     Toast.makeText(this, "已计划导出到 skins/，请进入支付宝付款码后回到本页刷新", Toast.LENGTH_LONG).show();
                 })
                 .setNegativeButton("取消", null).show();
+    }
+
+    private void openProjectHomepage() {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://github.com/nov30th/AlipayHighHeadsomeRichAndroid")));
+        } catch (Exception e) {
+            Toast.makeText(this, "无法打开浏览器: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void refreshActivateButton() {
