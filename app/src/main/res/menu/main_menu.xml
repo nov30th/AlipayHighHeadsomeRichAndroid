@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item
-        android:id="@+id/action_update_cache"
-        android:title="更新缓存"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_export_builtin"
-        android:title="导出内置皮肤"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_clear_cache"
-        android:title="清空缓存"
-        app:showAsAction="never" />
+    <group android:id="@+id/group_cache">
+        <item
+            android:id="@+id/action_update_cache"
+            android:title="更新缓存"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_export_builtin"
+            android:title="导出内置皮肤"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_clear_cache"
+            android:title="清空缓存"
+            app:showAsAction="never" />
+    </group>
+    <group android:id="@+id/group_about">
+        <item
+            android:id="@+id/action_github"
+            android:title="项目主页 (GitHub)"
+            app:showAsAction="never" />
+    </group>
 </menu>
