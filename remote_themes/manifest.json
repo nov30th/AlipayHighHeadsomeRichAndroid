@@ -1,0 +1,14 @@
+{
+  "notice": {
+    "title": "在线主题",
+    "message": "由作者整理的支付宝 App 主题样例。下载即解压到本地 themes/ 文件夹，可直接在主题页选择并替换。",
+    "updatedAt": "2026-05-05"
+  },
+  "themes": [
+    {
+      "name": "HOHO 黑钻主题",
+      "file": "hohotheme.zip",
+      "description": "深色基调的支付宝主题（首页 / 财富 / 生活 / 消息 / 我的 全套）"
+    }
+  ]
+}
