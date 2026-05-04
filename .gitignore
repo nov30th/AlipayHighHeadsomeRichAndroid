@@ -67,3 +67,9 @@ fastlane/readme.md
 .DS_Store
 app/release/**
 app/debug/**
+
+# 远程皮肤资源：必须随仓库一起发布，App 通过 raw.githubusercontent 拉取
+!remote_skins/
+!remote_skins/**
+!remote_skins/*.zip
+!remote_skins/manifest.json
