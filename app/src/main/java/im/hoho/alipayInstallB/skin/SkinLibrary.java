@@ -323,6 +323,60 @@ public final class SkinLibrary {
     }
 
     /**
+     * 导入主题 zip：解压到 imports_tmp/<本次>/ -> 校验 -> 移动到 themes/<name>/，同名直接覆盖。
+     * zip 顶层必须是包含 meta.json 的主题目录。
+     */
+    public static ImportResult importThemeZip(File zip) {
+        if (zip == null || !zip.exists() || !zip.isFile()) {
+            return ImportResult.fail("zip 文件不存在");
+        }
+        ensureRoot();
+        File tmpBase = new File(SkinPaths.importsTmpDir(),
+                "imp_theme_" + System.currentTimeMillis());
+
+        try {
+            SkinIO.safeExtract(zip, tmpBase);
+        } catch (IOException e) {
+            return ImportResult.fail("解压失败: " + e.getMessage());
+        }
+
+        File themeDir = locateSkinDir(tmpBase);
+        if (themeDir == null) {
+            SkinIO.deleteRecursive(tmpBase);
+            return ImportResult.fail("zip 内未找到包含 meta.json 的主题目录");
+        }
+        if (!SkinMeta.isValid(themeDir)) {
+            return ImportResult.fail("meta.json 校验失败");
+        }
+        String name = themeDir.getName();
+        if (SkinPaths.isReservedName(name)) {
+            SkinIO.deleteRecursive(tmpBase);
+            return ImportResult.fail("主题名为保留名: " + name);
+        }
+
+        File themesDir = SkinPaths.themesDir();
+        if (!themesDir.exists() && !themesDir.mkdirs()) {
+            return ImportResult.fail("无法创建 themes 目录");
+        }
+        File target = new File(themesDir, name);
+        if (target.exists()) {
+            if (!SkinIO.deleteRecursive(target)) {
+                return ImportResult.fail("无法覆盖旧主题: " + name);
+            }
+        }
+        if (!themeDir.renameTo(target)) {
+            try {
+                SkinIO.copyDir(themeDir, target);
+                SkinIO.deleteRecursive(themeDir);
+            } catch (IOException e) {
+                return ImportResult.fail("移动失败: " + e.getMessage());
+            }
+        }
+        SkinIO.deleteRecursive(tmpBase);
+        return ImportResult.ok(name);
+    }
+
+    /**
      * tmpBase 应为单一皮肤目录的容器：
      *   - 如果 tmpBase 直接含 meta.json -> 视为非法（不兼容扁平 zip）
      *   - 否则取第一个含 meta.json 的子目录

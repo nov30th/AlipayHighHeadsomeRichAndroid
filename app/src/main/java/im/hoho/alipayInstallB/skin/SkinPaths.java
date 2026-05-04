@@ -17,6 +17,9 @@ public final class SkinPaths {
     public static final String REMOTE_MANIFEST_URL =
             "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/raw/master/remote_skins/manifest.json";
 
+    public static final String REMOTE_THEME_MANIFEST_URL =
+            "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/raw/master/remote_themes/manifest.json";
+
     private static final String[] RESERVED = {
             "actived", "update", "delete", "export", "theme_export",
             "theme_actived", "theme_update",

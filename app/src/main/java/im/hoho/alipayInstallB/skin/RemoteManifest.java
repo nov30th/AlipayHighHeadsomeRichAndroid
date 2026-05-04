@@ -57,6 +57,14 @@ public final class RemoteManifest {
     }
 
     public static RemoteManifest parse(String json) {
+        return parse(json, "skins");
+    }
+
+    /**
+     * 解析远程 manifest。
+     * @param arrayKey 主体数组 key：皮肤为 "skins"，主题为 "themes"。
+     */
+    public static RemoteManifest parse(String json, String arrayKey) {
         JSONObject root = JSON.parseObject(json);
         if (root == null) return new RemoteManifest(null, Collections.<RemoteSkin>emptyList());
 
@@ -70,7 +78,7 @@ public final class RemoteManifest {
         }
 
         List<RemoteSkin> skins = new ArrayList<>();
-        JSONArray arr = root.getJSONArray("skins");
+        JSONArray arr = root.getJSONArray(arrayKey);
         if (arr != null) {
             for (int i = 0; i < arr.size(); i++) {
                 JSONObject obj;

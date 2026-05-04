@@ -477,6 +477,10 @@ public class MainActivity extends Activity {
         });
         
         fabAdd.setOnClickListener(v -> {
+            if (currentTab == 1) {
+                openRemoteThemes();
+                return;
+            }
             String[] options = {"导入本地 Zip", "从 Github 下载更多"};
             new MaterialAlertDialogBuilder(this)
                 .setTitle("添加皮肤")
@@ -512,7 +516,8 @@ public class MainActivity extends Activity {
         boolean theme = tab == 1;
         skinPanel.setVisibility(theme ? View.GONE : View.VISIBLE);
         themePanel.setVisibility(theme ? View.VISIBLE : View.GONE);
-        fabAdd.setVisibility(theme ? View.GONE : View.VISIBLE);
+        fabAdd.setVisibility(View.VISIBLE);
+        fabAdd.setText(theme ? "在线主题" : "添加皮肤");
         if (theme) {
             tvEmpty.setVisibility(View.GONE);
             refreshThemeExportStatus();
@@ -1073,6 +1078,123 @@ public class MainActivity extends Activity {
                     if (r.success) {
                         Toast.makeText(this, "下载并导入成功: " + r.dirName, Toast.LENGTH_SHORT).show();
                         loadSkins();
+                    } else {
+                        Toast.makeText(this, "导入失败: " + r.message, Toast.LENGTH_LONG).show();
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    Toast.makeText(this, "下载失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void openRemoteThemes() {
+        BusyDialog loading = showBusyDialog(
+                "正在读取在线主题",
+                "正在连接 Github 并读取主题列表，网络较慢时请稍候。",
+                false);
+        executorService.execute(() -> {
+            try {
+                String json = RemoteManifest.downloadManifest(SkinPaths.REMOTE_THEME_MANIFEST_URL);
+                RemoteManifest manifest = RemoteManifest.parse(json, "themes");
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    showRemoteThemesDialog(manifest);
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    Toast.makeText(this, "连接失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void showRemoteThemesDialog(RemoteManifest manifest) {
+        if (manifest.notice != null && (manifest.notice.message != null || manifest.notice.title != null)) {
+            String title = manifest.notice.title != null ? manifest.notice.title : "公告";
+            StringBuilder msg = new StringBuilder();
+            if (manifest.notice.message != null) msg.append(manifest.notice.message);
+            if (manifest.notice.updatedAt != null) {
+                if (msg.length() > 0) msg.append("\n\n");
+                msg.append("更新时间: ").append(manifest.notice.updatedAt);
+            }
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(title)
+                    .setMessage(msg.toString())
+                    .setPositiveButton("查看主题列表", (d, w) -> showRemoteThemesList(manifest))
+                    .setNegativeButton("取消", null)
+                    .show();
+        } else {
+            showRemoteThemesList(manifest);
+        }
+    }
+
+    private void showRemoteThemesList(RemoteManifest manifest) {
+        final List<RemoteManifest.RemoteSkin> items = uniqueRemoteSkins(manifest.skins);
+        if (items.isEmpty()) {
+            Toast.makeText(this, "远程没有可用主题", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ArrayAdapter<RemoteManifest.RemoteSkin> adapter =
+                new ArrayAdapter<RemoteManifest.RemoteSkin>(this, R.layout.remote_skin_item, items) {
+                    @NonNull
+                    @Override
+                    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                        View view = convertView;
+                        if (view == null) {
+                            view = LayoutInflater.from(getContext())
+                                    .inflate(R.layout.remote_skin_item, parent, false);
+                        }
+                        RemoteManifest.RemoteSkin s = getItem(position);
+                        TextView name = view.findViewById(R.id.tvRemoteSkinName);
+                        TextView desc = view.findViewById(R.id.tvRemoteSkinDescription);
+                        TextView file = view.findViewById(R.id.tvRemoteSkinFile);
+
+                        String displayName = s != null && s.name != null && !s.name.trim().isEmpty()
+                                ? s.name.trim()
+                                : (s != null ? s.file : "");
+                        name.setText(displayName);
+
+                        String description = s == null ? null : cleanRemoteDescription(s);
+                        if (description == null || description.isEmpty()) {
+                            desc.setVisibility(View.GONE);
+                        } else {
+                            desc.setVisibility(View.VISIBLE);
+                            desc.setText(description);
+                        }
+
+                        file.setText(s != null ? s.file : "");
+                        return view;
+                    }
+                };
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("在线主题")
+                .setAdapter(adapter, (d, w) -> downloadRemoteTheme(items.get(w)))
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void downloadRemoteTheme(RemoteManifest.RemoteSkin s) {
+        String title = s.name != null && !s.name.trim().isEmpty() ? s.name.trim() : s.file;
+        BusyDialog loading = showBusyDialog("正在下载主题 (Github)", title + "\n准备从 Github 下载...", true);
+        executorService.execute(() -> {
+            try {
+                File zip = RemoteManifest.downloadSkinZip(SkinPaths.REMOTE_THEME_MANIFEST_URL, s.file,
+                        pct -> mainHandler.post(() -> {
+                            loading.progressBar.setProgress(pct);
+                            loading.messageView.setText(title + "\n正在从 Github 下载，已完成 " + pct + "%");
+                        }));
+                SkinLibrary.ImportResult r = SkinLibrary.importThemeZip(zip);
+                zip.delete();
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    if (r.success) {
+                        Toast.makeText(this, "下载并导入成功: " + r.dirName, Toast.LENGTH_SHORT).show();
+                        loadThemes();
                     } else {
                         Toast.makeText(this, "导入失败: " + r.message, Toast.LENGTH_LONG).show();
                     }
