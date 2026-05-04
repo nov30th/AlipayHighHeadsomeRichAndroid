@@ -13,6 +13,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -338,11 +340,29 @@ public class MainActivity extends Activity {
     }
 
     private void showPrivacyDialog(SharedPreferences settings) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("隐私说明")
-                .setMessage("本应用不会收集、不会上传任何用户信息或使用数据。\n\n应用仅在本地运行，除非您点击\"下载更多\"。")
-                .setPositiveButton("我知道了", (dialog, which) -> settings.edit().putBoolean(KEY_FIRST_RUN, false).apply())
-                .setCancelable(false).show();
+        CharSequence message = Html.fromHtml(
+                "<b>欢迎使用支付宝装X模块</b><br/><br/>" +
+                "本应用 <b>默认完全不联网</b>：<br/>" +
+                "&nbsp;&nbsp;• <b>不联网</b>，不发起任何后台网络请求<br/>" +
+                "&nbsp;&nbsp;• <b>不收集</b>任何使用数据<br/>" +
+                "&nbsp;&nbsp;• <b>不上传</b>任何用户信息<br/>" +
+                "&nbsp;&nbsp;• 所有皮肤与配置仅保存在本设备<br/><br/>" +
+                "唯一的例外：当您主动点击 <b>添加皮肤 → 从 Github 下载更多</b> 时，应用才会连接 GitHub 获取在线皮肤清单。<br/><br/>" +
+                "<small>项目主页：<a href=\"https://github.com/nov30th/AlipayHighHeadsomeRichAndroid\">nov30th/AlipayHighHeadsomeRichAndroid</a></small>",
+                Html.FROM_HTML_MODE_LEGACY);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("🔒 隐私说明")
+                .setMessage(message)
+                .setPositiveButton("我已了解", (d, w) -> settings.edit().putBoolean(KEY_FIRST_RUN, false).apply())
+                .setCancelable(false)
+                .show();
+
+        TextView messageView = dialog.findViewById(android.R.id.message);
+        if (messageView != null) {
+            messageView.setMovementMethod(LinkMovementMethod.getInstance());
+            messageView.setLineSpacing(dp(2), 1.1f);
+        }
     }
 
     private void setupButtons() {
