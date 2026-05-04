@@ -123,6 +123,9 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    handleThemeExportRequest();
+                    handleThemeReplaceRequest(lpparam.classLoader);
+
                     String newGrade = getCurrentMemberGrade();
 
                     if (isDbUpdated[0] || newGrade.equals("原有")) {
@@ -288,5 +291,139 @@ public class PluginMain implements IXposedHookLoadPackage {
             }
         }
         return "原有";
+    }
+
+    private static void handleThemeExportRequest() {
+        File flag = SkinPaths.themeExportFlag();
+        if (!flag.exists()) return;
+
+        try {
+            File sourceRoot = SkinPaths.alipayThemeRoot();
+            File outputRoot = SkinPaths.themesDir();
+            if (!outputRoot.exists()) outputRoot.mkdirs();
+
+            int exported = 0;
+            if (!sourceRoot.exists() || !sourceRoot.isDirectory()) {
+                XposedBridge.log("[theme] source root missing: " + sourceRoot.getAbsolutePath());
+                return;
+            }
+
+            File[] userDirs = sourceRoot.listFiles();
+            if (userDirs == null) {
+                XposedBridge.log("[theme] source root unreadable: " + sourceRoot.getAbsolutePath());
+                return;
+            }
+
+            for (File userDir : userDirs) {
+                if (userDir == null || !userDir.isDirectory()) continue;
+                File themeDir = new File(userDir, "theme");
+                if (!themeDir.exists() || !themeDir.isDirectory()) continue;
+
+                File ltpDir = new File(userDir, "ltp");
+                File[] themes = themeDir.listFiles();
+                if (themes == null) continue;
+
+                for (File theme : themes) {
+                    if (theme == null || !theme.isDirectory()) continue;
+                    File target = new File(outputRoot, theme.getName());
+                    if (target.exists()) SkinIO.deleteRecursive(target);
+                    try {
+                        SkinIO.copyDir(theme, target);
+                        if (ltpDir.exists() && ltpDir.isDirectory()) {
+                            SkinIO.copyDir(ltpDir, new File(target, "ltp"));
+                        }
+                        exported++;
+                        XposedBridge.log("[theme] exported theme: " + theme.getName());
+                    } catch (Exception e) {
+                        XposedBridge.log("[theme] export failed: " + theme.getName()
+                                + " -> " + e.getMessage());
+                    }
+                }
+            }
+
+            XposedBridge.log("[theme] export completed, count=" + exported);
+        } catch (Exception e) {
+            XposedBridge.log("[theme] export error: " + e.getMessage());
+        } finally {
+            try {
+                SkinIO.deleteRecursive(flag);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static void handleThemeReplaceRequest(ClassLoader classLoader) {
+        File updateFlag = SkinPaths.themeUpdateFlag();
+        if (!updateFlag.exists()) return;
+
+        try {
+            String selectedTheme = readSelectedThemeName();
+            if (selectedTheme == null) {
+                XposedBridge.log("[theme] replace failed: selected_theme is empty");
+                return;
+            }
+
+            File source = new File(SkinPaths.themesDir(), selectedTheme);
+            if (!source.exists() || !source.isDirectory()) {
+                XposedBridge.log("[theme] replace failed: selected theme missing: "
+                        + source.getAbsolutePath());
+                return;
+            }
+
+            String userId = getAlipayCurrentUserId(classLoader);
+            if (userId == null || userId.length() == 0) {
+                XposedBridge.log("[theme] replace failed: current user id is empty");
+                return;
+            }
+
+            File themeRoot = new File(new File(SkinPaths.alipayThemeRoot(), userId), "theme");
+            if (!themeRoot.exists() || !themeRoot.isDirectory()) {
+                XposedBridge.log("[theme] replace failed: theme root missing: "
+                        + themeRoot.getAbsolutePath());
+                return;
+            }
+
+            File[] activeFolders = themeRoot.listFiles(file -> file != null && file.isDirectory());
+            if (activeFolders == null || activeFolders.length < 1) {
+                XposedBridge.log("[theme] replace failed: no active theme folder under "
+                        + themeRoot.getAbsolutePath() + ", got "
+                        + (activeFolders == null ? "null" : String.valueOf(activeFolders.length)));
+                return;
+            }
+
+            File target = activeFolders[0];
+            SkinIO.deleteRecursive(target);
+            SkinIO.copyDir(source, target);
+            SkinIO.deleteRecursive(updateFlag);
+            XposedBridge.log("[theme] replaced active theme folder " + target.getName()
+                    + " with exported theme " + selectedTheme);
+        } catch (Exception e) {
+            XposedBridge.log("[theme] replace error: " + e.getMessage());
+        }
+    }
+
+    private static String readSelectedThemeName() {
+        File file = SkinPaths.selectedThemeFile();
+        if (!file.exists() || !file.isFile()) return null;
+        try {
+            String value = new String(SkinIO.readAllBytes(file), "UTF-8").trim();
+            return value.length() == 0 ? null : value;
+        } catch (Exception e) {
+            XposedBridge.log("[theme] read selected_theme failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static String getAlipayCurrentUserId(ClassLoader classLoader) {
+        try {
+            Class<?> util = XposedHelpers.findClass(
+                    "com.alipay.mobile.skincenter.util.SCCommonUtil",
+                    classLoader);
+            Object result = XposedHelpers.callStaticMethod(util, "getCurrentUserId");
+            return result instanceof String ? (String) result : null;
+        } catch (Exception e) {
+            XposedBridge.log("[theme] getCurrentUserId failed: " + e.getMessage());
+            return null;
+        }
     }
 }

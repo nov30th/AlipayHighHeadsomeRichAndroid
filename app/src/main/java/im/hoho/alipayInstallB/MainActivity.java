@@ -39,14 +39,18 @@ import com.alibaba.fastjson.JSONObject;
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,9 +77,18 @@ public class MainActivity extends Activity {
     private SkinAdapter skinAdapter;
     
     private MaterialToolbar toolbar;
+    private TabLayout tabLayout;
     private MaterialSwitch btnActivate;
     private ExtendedFloatingActionButton fabAdd;
     private AutoCompleteTextView spinnerMemberGrade;
+    private View skinPanel;
+    private View themePanel;
+    private MaterialButton btnExportThemes;
+    private Chip chipThemeExportStatus;
+    private TextView tvThemeExportPath;
+    private LinearLayout themeListContainer;
+    private final List<ThemeModel> themeList = new ArrayList<>();
+    private int currentTab = 0;
     
     private ExecutorService executorService;
     private Handler mainHandler;
@@ -149,6 +162,85 @@ public class MainActivity extends Activity {
                     }
                 }
             } catch (Exception ignored) {
+            }
+        }
+
+        private static String resolve(File dir, String name) {
+            if (name == null || name.isEmpty()) return null;
+            File f = new File(dir, name);
+            if (f.exists()) return f.getAbsolutePath();
+            File[] siblings = dir.listFiles();
+            if (siblings == null) return null;
+            for (File s : siblings) {
+                if (s.isFile() && s.getName().startsWith(name)) return s.getAbsolutePath();
+            }
+            return null;
+        }
+    }
+
+    static class ThemeModel {
+        final String dirName;
+        String displayName;
+        String bgPath;
+        boolean isPending;
+
+        ThemeModel(File dir, String selectedTheme, boolean updatePending) {
+            this.dirName = dir.getName();
+            this.displayName = dir.getName();
+            this.isPending = updatePending && dirName.equals(selectedTheme);
+            parseMeta(dir);
+        }
+
+        private void parseMeta(File themeDir) {
+            File metaJsonFile = new File(themeDir, "meta.json");
+            if (!metaJsonFile.exists()) {
+                pickFallbackImage(themeDir);
+                return;
+            }
+            try {
+                byte[] bytes = im.hoho.alipayInstallB.skin.SkinIO.readAllBytes(metaJsonFile);
+                JSONObject json = JSON.parseObject(new String(bytes, "UTF-8"));
+                if (json == null) {
+                    pickFallbackImage(themeDir);
+                    return;
+                }
+                String desc = json.getString("description");
+                if (desc != null && !desc.trim().isEmpty()) {
+                    displayName = desc.trim();
+                }
+                JSONArray resources = json.getJSONArray("resource");
+                if (resources != null) {
+                    String firstImage = null;
+                    for (int i = 0; i < resources.size(); i++) {
+                        JSONObject res = resources.getJSONObject(i);
+                        if (res == null) continue;
+                        String image = res.getString("image");
+                        if (image == null || image.isEmpty()) continue;
+                        String resolved = resolve(themeDir, image);
+                        if (resolved == null) continue;
+                        if (firstImage == null) firstImage = resolved;
+                        String pos = res.getString("position");
+                        if ("home_navi_bg".equals(pos) || "me_navi_bg".equals(pos)) {
+                            bgPath = resolved;
+                            break;
+                        }
+                    }
+                    if (bgPath == null) bgPath = firstImage;
+                }
+                if (bgPath == null) pickFallbackImage(themeDir);
+            } catch (Exception ignored) {
+                pickFallbackImage(themeDir);
+            }
+        }
+
+        private void pickFallbackImage(File themeDir) {
+            String[] names = {"home_navi_bg", "me_navi_bg", "tab_bar_bg_200"};
+            for (String name : names) {
+                String resolved = resolve(themeDir, name);
+                if (resolved != null) {
+                    bgPath = resolved;
+                    return;
+                }
             }
         }
 
@@ -298,6 +390,9 @@ public class MainActivity extends Activity {
             return false;
         });
 
+        tabLayout = findViewById(R.id.tabLayout);
+        setupTabs();
+
         spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
         setupMemberGradeSpinner();
         ((TextView) findViewById(R.id.tvVersion)).setText("Version: " + BuildConfig.VERSION_NAME);
@@ -310,8 +405,16 @@ public class MainActivity extends Activity {
 
         btnActivate = findViewById(R.id.btnActivate);
         fabAdd = findViewById(R.id.fabAdd);
+        skinPanel = findViewById(R.id.skinPanel);
+        themePanel = findViewById(R.id.themePanel);
+        btnExportThemes = findViewById(R.id.btnExportThemes);
+        chipThemeExportStatus = findViewById(R.id.chipThemeExportStatus);
+        tvThemeExportPath = findViewById(R.id.tvThemeExportPath);
+        themeListContainer = findViewById(R.id.themeListContainer);
 
         setupButtons();
+        setupThemePanel();
+        showTab(0);
 
         if (!checkStoragePermission()) {
             requestStoragePermission();
@@ -334,6 +437,7 @@ public class MainActivity extends Activity {
                     Toast.makeText(this, "已清理 " + cleaned + " 个失效选中项", Toast.LENGTH_SHORT).show();
                 }
                 loadSkins();
+                loadThemes();
                 refreshActivateButton();
             });
         });
@@ -382,6 +486,274 @@ public class MainActivity extends Activity {
                 })
                 .show();
         });
+    }
+
+    private void setupTabs() {
+        tabLayout.addTab(tabLayout.newTab().setText("付款皮肤"));
+        tabLayout.addTab(tabLayout.newTab().setText("主题"));
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                showTab(tab.getPosition());
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
+    }
+
+    private void showTab(int tab) {
+        currentTab = tab;
+        boolean theme = tab == 1;
+        skinPanel.setVisibility(theme ? View.GONE : View.VISIBLE);
+        themePanel.setVisibility(theme ? View.VISIBLE : View.GONE);
+        fabAdd.setVisibility(theme ? View.GONE : View.VISIBLE);
+        if (theme) {
+            tvEmpty.setVisibility(View.GONE);
+            refreshThemeExportStatus();
+        } else {
+            tvEmpty.setVisibility(skinList.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void setupThemePanel() {
+        tvThemeExportPath.setText("导出目录: " + SkinPaths.themesDir().getAbsolutePath());
+        btnExportThemes.setOnClickListener(v -> confirmExportThemes());
+        refreshThemeExportStatus();
+    }
+
+    private void confirmExportThemes() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("导出支付宝主题")
+                .setMessage("将创建导出请求。请随后切换到支付宝，模块会在支付宝进程中读取当前账号主题并导出到 themes/ 文件夹。")
+                .setPositiveButton("创建请求", (d, w) -> {
+                    SkinLibrary.requestThemeExport();
+                    refreshThemeExportStatus();
+                    Toast.makeText(this, "已创建主题导出请求，请切换到支付宝", Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void refreshThemeExportStatus() {
+        if (chipThemeExportStatus == null) return;
+        if (SkinPaths.themeExportFlag().exists()) {
+            chipThemeExportStatus.setText("已创建请求，等待打开支付宝");
+        } else {
+            File dir = SkinPaths.themesDir();
+            File[] themes = dir.exists() && dir.isDirectory() ? dir.listFiles() : null;
+            int count = 0;
+            if (themes != null) {
+                for (File theme : themes) {
+                    if (theme != null && theme.isDirectory()) count++;
+                }
+            }
+            chipThemeExportStatus.setText(count > 0 ? "已导出 " + count + " 个主题" : "未创建导出请求");
+        }
+    }
+
+    private void loadThemes() {
+        executorService.execute(() -> {
+            File dir = SkinPaths.themesDir();
+            String selected = SkinLibrary.readSelectedTheme();
+            boolean updatePending = SkinLibrary.isThemeUpdatePending();
+            List<ThemeModel> built = new ArrayList<>();
+            File[] themes = dir.exists() && dir.isDirectory() ? dir.listFiles() : null;
+            if (themes != null) {
+                for (File theme : themes) {
+                    if (theme == null || !theme.isDirectory()) continue;
+                    if (SkinPaths.isReservedName(theme.getName())) continue;
+                    built.add(new ThemeModel(theme, selected, updatePending));
+                }
+            }
+            Collections.sort(built, (a, b) -> a.displayName.compareTo(b.displayName));
+            mainHandler.post(() -> {
+                themeList.clear();
+                themeList.addAll(built);
+                renderThemeCards();
+                refreshThemeExportStatus();
+            });
+        });
+    }
+
+    private void renderThemeCards() {
+        themeListContainer.removeAllViews();
+        if (themeList.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("暂无已导出的主题\n\n点击上方导出所有主题，然后切换到支付宝");
+            empty.setGravity(android.view.Gravity.CENTER);
+            empty.setTextColor(Color.parseColor("#777777"));
+            empty.setTextSize(15);
+            empty.setPadding(dp(16), dp(32), dp(16), dp(32));
+            themeListContainer.addView(empty, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            return;
+        }
+        for (ThemeModel theme : themeList) {
+            themeListContainer.addView(createThemeCard(theme));
+        }
+    }
+
+    private View createThemeCard(ThemeModel theme) {
+        MaterialCardView card = new MaterialCardView(this);
+        card.setRadius(dp(16));
+        card.setCardElevation(dp(1));
+        card.setStrokeWidth(dp(1));
+        card.setStrokeColor(Color.parseColor(theme.isPending ? "#1677FF" : "#E0E0E0"));
+        card.setUseCompatPadding(true);
+        card.setClickable(true);
+        card.setOnClickListener(v -> selectTheme(theme));
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+
+        android.widget.FrameLayout preview = new android.widget.FrameLayout(this);
+
+        ImageView bg = new ImageView(this);
+        bg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        bg.setBackgroundColor(Color.parseColor("#E8EEF7"));
+        if (theme.bgPath != null) {
+            Glide.with(this).load(new File(theme.bgPath)).into(bg);
+        }
+        preview.addView(bg, new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        View shade = new View(this);
+        shade.setBackgroundColor(Color.parseColor("#66000000"));
+        android.widget.FrameLayout.LayoutParams shadeLp = new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(64), android.view.Gravity.BOTTOM);
+        preview.addView(shade, shadeLp);
+
+        TextView previewName = new TextView(this);
+        previewName.setText(theme.displayName);
+        previewName.setTextColor(Color.WHITE);
+        previewName.setTextSize(18);
+        previewName.setSingleLine(true);
+        previewName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        previewName.setPadding(dp(16), 0, dp(16), dp(14));
+        android.widget.FrameLayout.LayoutParams previewNameLp = new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.BOTTOM);
+        preview.addView(previewName, previewNameLp);
+
+        box.addView(preview, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(136)));
+
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(dp(16), dp(12), dp(16), dp(12));
+
+        TextView name = new TextView(this);
+        name.setText(theme.displayName);
+        name.setTextColor(Color.parseColor("#222222"));
+        name.setTextSize(16);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        row.addView(name, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+
+        Chip status = new Chip(this);
+        status.setCheckable(false);
+        status.setText(theme.isPending ? "准备替换" : "替换");
+        status.setClickable(true);
+        status.setOnClickListener(v -> selectTheme(theme));
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        actionLp.leftMargin = dp(6);
+        row.addView(status, actionLp);
+
+        MaterialButton zip = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        zip.setText("Zip");
+        zip.setMinWidth(0);
+        zip.setMinimumWidth(0);
+        zip.setPadding(dp(10), 0, dp(10), 0);
+        zip.setOnClickListener(v -> exportTheme(theme));
+        LinearLayout.LayoutParams zipLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        zipLp.leftMargin = dp(6);
+        row.addView(zip, zipLp);
+
+        MaterialButton delete = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        delete.setText("删除");
+        delete.setMinWidth(0);
+        delete.setMinimumWidth(0);
+        delete.setPadding(dp(10), 0, dp(10), 0);
+        delete.setTextColor(Color.parseColor("#D93025"));
+        delete.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#D93025")));
+        delete.setOnClickListener(v -> confirmDeleteTheme(theme));
+        LinearLayout.LayoutParams deleteLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        deleteLp.leftMargin = dp(6);
+        row.addView(delete, deleteLp);
+
+        box.addView(row);
+        card.addView(box);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(12);
+        card.setLayoutParams(lp);
+        return card;
+    }
+
+    private void selectTheme(ThemeModel theme) {
+        executorService.execute(() -> {
+            try {
+                SkinLibrary.saveSelectedTheme(theme.dirName);
+                SkinLibrary.requestThemeUpdate();
+                mainHandler.post(() -> {
+                    Toast.makeText(this, "已准备替换主题，请重新打开支付宝生效", Toast.LENGTH_LONG).show();
+                    loadThemes();
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> Toast.makeText(this,
+                        "准备替换失败: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    private void exportTheme(ThemeModel theme) {
+        BusyDialog loading = showBusyDialog("导出主题", "正在打包 " + theme.displayName + "...", true);
+        executorService.execute(() -> {
+            SkinLibrary.ExportResult r = SkinLibrary.exportThemeZip(theme.dirName);
+            mainHandler.post(() -> {
+                loading.dismiss();
+                if (r.success) {
+                    Toast.makeText(this, "导出成功: exports/" + r.zipFile.getName(), Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "导出失败: " + r.message, Toast.LENGTH_LONG).show();
+                }
+            });
+        });
+    }
+
+    private void confirmDeleteTheme(ThemeModel theme) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("删除主题")
+                .setMessage("确定删除 \"" + theme.displayName + "\" (" + theme.dirName + ") ？\n如果该主题正在准备替换，也会取消本次替换请求。")
+                .setPositiveButton("删除", (dialog, which) -> executorService.execute(() -> {
+                    boolean ok = SkinLibrary.deleteTheme(theme.dirName);
+                    mainHandler.post(() -> {
+                        Toast.makeText(this, ok ? "已删除主题" : "删除主题失败", Toast.LENGTH_SHORT).show();
+                        loadThemes();
+                    });
+                }))
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void doRequestUpdate() {
@@ -453,7 +825,9 @@ public class MainActivity extends Activity {
                 skinList.clear();
                 skinList.addAll(built);
                 skinAdapter.notifyDataSetChanged();
-                tvEmpty.setVisibility(skinList.isEmpty() ? View.VISIBLE : View.GONE);
+                if (currentTab == 0) {
+                    tvEmpty.setVisibility(skinList.isEmpty() ? View.VISIBLE : View.GONE);
+                }
             });
         });
     }
@@ -825,7 +1199,9 @@ public class MainActivity extends Activity {
         super.onResume();
         if (checkStoragePermission()) {
             loadSkins();
+            loadThemes();
             refreshActivateButton();
+            refreshThemeExportStatus();
         }
     }
 }

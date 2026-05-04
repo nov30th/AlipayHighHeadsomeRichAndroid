@@ -18,9 +18,10 @@ public final class SkinPaths {
             "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/raw/master/remote_skins/manifest.json";
 
     private static final String[] RESERVED = {
-            "actived", "update", "delete", "export",
-            "skins", "exports", "imports_tmp",
-            "selected_skins.json", "migration_v2_done"
+            "actived", "update", "delete", "export", "theme_export",
+            "theme_actived", "theme_update",
+            "skins", "exports", "imports_tmp", "themes",
+            "selected_skins.json", "selected_theme", "migration_v2_done"
     };
 
     private SkinPaths() {
@@ -36,6 +37,10 @@ public final class SkinPaths {
 
     public static File exportsDir() {
         return new File(root(), "exports");
+    }
+
+    public static File themesDir() {
+        return new File(root(), "themes");
     }
 
     public static File importsTmpDir() {
@@ -66,8 +71,24 @@ public final class SkinPaths {
         return new File(root(), "export");
     }
 
+    public static File themeExportFlag() {
+        return new File(root(), "theme_export");
+    }
+
+    public static File themeUpdateFlag() {
+        return new File(root(), "theme_update");
+    }
+
+    public static File selectedThemeFile() {
+        return new File(root(), "selected_theme");
+    }
+
     public static File alipayPrivateRoot() {
         return new File("/data/data/" + ALIPAY_PKG + "/files/onsitepay_skin_dir");
+    }
+
+    public static File alipayThemeRoot() {
+        return new File("/data/data/" + ALIPAY_PKG + "/files/skin_center_dir");
     }
 
     public static File alipayHohoCache() {
