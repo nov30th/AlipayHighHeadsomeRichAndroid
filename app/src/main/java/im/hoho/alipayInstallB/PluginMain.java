@@ -8,13 +8,13 @@ import android.os.Environment;
 import com.alibaba.fastjson.JSON;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import im.hoho.alipayInstallB.skin.SelectedSkins;
+import im.hoho.alipayInstallB.skin.SkinIO;
+import im.hoho.alipayInstallB.skin.SkinPaths;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -149,175 +149,129 @@ public class PluginMain implements IXposedHookLoadPackage {
             });
 
 
-            //region modify skin
-//            final Class<?> ConfigUtilBiz = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz");
+            //region modify skin (v2)
             final Class<?> OspSkinModel = lpparam.classLoader.loadClass("com.alipay.mobile.onsitepaystatic.skin.OspSkinModel");
 
             XposedHelpers.findAndHookMethod("com.alipay.mobile.onsitepaystatic.ConfigUtilBiz", lpparam.classLoader, "getFacePaySkinModel", new XC_MethodHook() {
 
-
-                @SuppressWarnings("ResultOfMethodCallIgnored")
-                public void deleteFile(File file) {
-                    if (file.isDirectory()) {
-                        File[] files = file.listFiles();
-                        for (File f : files) {
-                            deleteFile(f);
-                        }
-                        file.delete();
-                    } else if (file.exists()) {
-                        file.delete();
-                    }
-                }
-
-                @SuppressWarnings("ResultOfMethodCallIgnored")
-                public void copy(String fromFile, String toFile) {
-//                            XposedBridge.log("DEBUG: copy: " + fromFile + " to " + toFile);
-                    File[] currentFiles;
-                    File root = new File(fromFile);
-                    if (!root.exists()) {
-                        return;
-                    }
-                    currentFiles = root.listFiles();
-                    File targetDir = new File(toFile);
-                    if (!targetDir.exists()) {
-                        targetDir.mkdirs();
-                    }
-                    for (File currentFile : currentFiles) {
-                        if (currentFile.isDirectory())//如果当前项为子目录 进行递归
-                        {
-                            copy(currentFile.getPath(), toFile + "/" + currentFile.getName());
-
-                        } else//如果当前项为文件则进行文件拷贝
-                        {
-                            CopySdcardFile(currentFile.getPath(), toFile + "/" + currentFile.getName());
-                        }
-                    }
-                }
-
-                public void CopySdcardFile(String fromFile, String toFile) {
-                    try {
-                        InputStream fosfrom = new FileInputStream(fromFile);
-                        OutputStream fosto = new FileOutputStream(toFile);
-                        byte[] bt = new byte[1024];
-                        int c;
-                        while ((c = fosfrom.read(bt)) > 0) {
-                            fosto.write(bt, 0, c);
-                        }
-                        fosfrom.close();
-                        fosto.close();
-                    } catch (Exception ex) {
-                        XposedBridge.log("ERROR: CopySdcardFile: " + ex.getMessage());
-                    }
-                }
-
-                public List<String> searchSkins(String Path) {
-                    List<String> resultList = new ArrayList<>();
-                    File[] files = new File(Path).listFiles();
-
-                    for (int i = 0; i < files.length; i++) {
-                        File f = files[i];
-                        if (f.isDirectory()) {
-                            if (f.getName().equals("update") || f.getName().equals("actived") || f.getName().equals("delete") || f.getName().startsWith("level_")) {
-                                continue;
-                            }
-                            String filename = f.getName();
-                            resultList.add(f.getName());
-                        }
-                    }
-                    return resultList;
-                }
-
-                @SuppressWarnings("ResultOfMethodCallIgnored")
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-
-                    String fixedPathInAliData = "/data/data/" + packageName + "/files/onsitepay_skin_dir/HOHO";
-                    String alipaySkinsRoot = "/data/data/" + packageName + "/files/onsitepay_skin_dir";
-//                    XposedBridge.log("DEBUG: fixedPathInAliData: " + fixedPathInAliData);
-                    File hohoSkinFileInAliData = new File(fixedPathInAliData);
-
-                    String basePathUpdates = Environment.getExternalStorageDirectory() + "/Android/media/" + packageName;
-                    if (!new File(basePathUpdates).exists()) {
-                        XposedBridge.log("DEBUG: creating skin SD card path: " + basePathUpdates);
-                        // create dir
-                        new File(basePathUpdates).mkdirs();
+                    File root = SkinPaths.root();
+                    if (!root.exists()) {
+                        XposedBridge.log("[v2] skin root missing, skip");
+                        return;
                     }
-                    String fixedPathUpdates = basePathUpdates + "/000_HOHO_ALIPAY_SKIN";
 
-                    File skinActived = new File(fixedPathUpdates + "/actived");
-                    File skinUpdateRequired = new File(fixedPathUpdates + "/update");
-                    File skinDeleteRequired = new File(fixedPathUpdates + "/delete");
-                    File exportSkinSign = new File(fixedPathUpdates + "/export");
+                    File hohoCache = SkinPaths.alipayHohoCache();
+                    File actived = SkinPaths.activedFlag();
+                    File updateFlag = SkinPaths.updateFlag();
+                    File deleteFlag = SkinPaths.deleteFlag();
+                    File exportFlag = SkinPaths.exportFlag();
+                    File alipayPrivateRoot = SkinPaths.alipayPrivateRoot();
+                    File skinsDir = SkinPaths.skinsDir();
 
-                    if (exportSkinSign.exists()) {
+                    // 1) export: 把支付宝内置皮肤复制到 skins/<原目录名>/
+                    if (exportFlag.exists()) {
                         try {
-                            //export skin
-                            XposedBridge.log("exporting skin...");
-                            //checks alipaySkinsRoot
-                            File alipaySkinsRootFile = new File(alipaySkinsRoot);
-                            if (!alipaySkinsRootFile.exists()) {
-                                //ignore export as no skins found
-                                XposedBridge.log("no skins found, ignore export");
-                            } else {
-                                //checks fixedPathUpdates is exists
-                                File fixedPathUpdatesFile = new File(fixedPathUpdates);
-                                if (!fixedPathUpdatesFile.exists()) {
-                                    //create fixedPathUpdates
-                                    fixedPathUpdatesFile.mkdirs();
-                                }
-                                //copies all skins to fixedPathUpdates except HOHO dir
-                                File[] alipaySkinsRootFileList = alipaySkinsRootFile.listFiles();
-                                for (File alipaySkinsRootFileListItem : alipaySkinsRootFileList) {
-                                    if (alipaySkinsRootFileListItem.isDirectory()) {
-                                        if (alipaySkinsRootFileListItem.getName().equals("HOHO")) {
-                                            continue;
+                            XposedBridge.log("[v2] exporting alipay built-in skins...");
+                            if (alipayPrivateRoot.exists()) {
+                                if (!skinsDir.exists()) skinsDir.mkdirs();
+                                File[] privateChildren = alipayPrivateRoot.listFiles();
+                                if (privateChildren != null) {
+                                    for (File p : privateChildren) {
+                                        if (p == null || !p.isDirectory()) continue;
+                                        if ("HOHO".equals(p.getName())) continue;
+                                        if (SkinPaths.isReservedName(p.getName())) continue;
+                                        File dst = new File(skinsDir, p.getName());
+                                        if (dst.exists()) SkinIO.deleteRecursive(dst);
+                                        try {
+                                            SkinIO.copyDir(p, dst);
+                                            XposedBridge.log("[v2] exported skin: " + p.getName());
+                                        } catch (Exception e) {
+                                            XposedBridge.log("[v2] export skin failed: "
+                                                    + p.getName() + " -> " + e.getMessage());
                                         }
-                                        XposedBridge.log("exporting skin: " + alipaySkinsRootFileListItem.getName());
-                                        copy(alipaySkinsRootFileListItem.getPath(), fixedPathUpdates + "/" + alipaySkinsRootFileListItem.getName());
                                     }
                                 }
-                                //removes the export sign
-                                exportSkinSign.delete();
                             }
+                            SkinIO.deleteRecursive(exportFlag);
                         } catch (Exception e) {
-                            XposedBridge.log("ERROR: export skin: " + e.getMessage());
+                            XposedBridge.log("[v2] export error: " + e.getMessage());
                         }
                     }
 
-                    if (skinDeleteRequired.exists()) {
-                        XposedBridge.log("deleting skin...");
-                        skinDeleteRequired.delete();
-                        deleteFile(hohoSkinFileInAliData);
-                        XposedBridge.log("skin is deleted");
-                    }
-
-                    if (skinUpdateRequired.exists()) {
-                        XposedBridge.log("copying skin...");
-                        skinUpdateRequired.delete();
-                        if (!hohoSkinFileInAliData.exists()) hohoSkinFileInAliData.mkdirs();
-                        copy(fixedPathUpdates, fixedPathInAliData);
-                        XposedBridge.log("copied files..");
-                    }
-
-                    if (hohoSkinFileInAliData.exists() && skinActived.exists()) {
-                        XposedBridge.log("updating skins..");
-                        List<String> randomConf = searchSkins(fixedPathInAliData);
-                        String subFolder = "";
-                        if (randomConf.size() > 0) {
-                            //random config
-//                                    XposedBridge.log("DEBUG: randomConf size: " + randomConf.size());
-                            int pos = (int) (Math.random() * 100) % randomConf.size();
-//                                    CopySdcardFile(randomConf.get(pos), fixedPathInAliData + "/meta.json");
-                            subFolder = randomConf.get(pos);
-//                                    XposedBridge.log("DEBUG: random, " + subFolder + " as current folder.");
+                    // 2) delete: 清空 HOHO 缓存
+                    if (deleteFlag.exists()) {
+                        try {
+                            SkinIO.deleteRecursive(deleteFlag);
+                            if (hohoCache.exists()) SkinIO.deleteRecursive(hohoCache);
+                            XposedBridge.log("[v2] HOHO cache cleared");
+                        } catch (Exception e) {
+                            XposedBridge.log("[v2] delete error: " + e.getMessage());
                         }
-                        String hohoSkinModel_Xiaomi12Pro = "{\"md5\":\"HOHO_MD5\",\"minWalletVersion\":\"10.2.23.0000\",\"outDirName\":\"HOHO/" + subFolder + "\",\"skinId\":\"HOHO_CUSTOMIZED\",\"skinStyleId\":\"2022 New Year Happy!\",\"userId\":\"HOHO\"}";
-                        Object skinModel = JSON.parseObject(hohoSkinModel_Xiaomi12Pro, OspSkinModel);
-                        param.setResult(skinModel);
-                        XposedBridge.log("skin updated..");
-                    } else {
-                        XposedBridge.log("skin is not active.");
                     }
+
+                    // 3) update: 清空 HOHO 缓存 + 按 selected_skins.json 复制
+                    if (updateFlag.exists()) {
+                        try {
+                            SkinIO.deleteRecursive(updateFlag);
+                            if (hohoCache.exists()) SkinIO.deleteRecursive(hohoCache);
+                            if (!hohoCache.mkdirs()) {
+                                XposedBridge.log("[v2] mkdirs HOHO failed: " + hohoCache);
+                            }
+                            List<String> selected = SelectedSkins.read(SkinPaths.selectedSkinsJson());
+                            int copied = 0;
+                            for (String name : selected) {
+                                if (name == null || SkinPaths.isReservedName(name)) continue;
+                                File src = new File(skinsDir, name);
+                                if (!src.exists() || !src.isDirectory()) continue;
+                                try {
+                                    SkinIO.copyDir(src, new File(hohoCache, name));
+                                    copied++;
+                                } catch (Exception e) {
+                                    XposedBridge.log("[v2] copy skin failed: "
+                                            + name + " -> " + e.getMessage());
+                                }
+                            }
+                            XposedBridge.log("[v2] HOHO cache rebuilt, " + copied + " skins copied");
+                        } catch (Exception e) {
+                            XposedBridge.log("[v2] update error: " + e.getMessage());
+                        }
+                    }
+
+                    // 4) 应用皮肤
+                    if (!actived.exists()) {
+                        XposedBridge.log("[v2] not actived, skip");
+                        return;
+                    }
+                    if (!hohoCache.exists() || !hohoCache.isDirectory()) {
+                        XposedBridge.log("[v2] HOHO cache missing, skip");
+                        return;
+                    }
+                    File[] cached = hohoCache.listFiles();
+                    if (cached == null) {
+                        XposedBridge.log("[v2] HOHO cache unreadable, skip");
+                        return;
+                    }
+                    List<String> available = new ArrayList<>();
+                    for (File c : cached) {
+                        if (c == null || !c.isDirectory()) continue;
+                        if (SkinPaths.isReservedName(c.getName())) continue;
+                        available.add(c.getName());
+                    }
+                    if (available.isEmpty()) {
+                        XposedBridge.log("[v2] HOHO cache empty, skip");
+                        return;
+                    }
+                    String pick = available.get((int) (Math.random() * available.size()));
+                    String json = "{\"md5\":\"HOHO_MD5\",\"minWalletVersion\":\"10.2.23.0000\""
+                            + ",\"outDirName\":\"HOHO/" + pick + "\""
+                            + ",\"skinId\":\"HOHO_CUSTOMIZED\""
+                            + ",\"skinStyleId\":\"HOHO_SKIN\""
+                            + ",\"userId\":\"HOHO\"}";
+                    Object skinModel = JSON.parseObject(json, OspSkinModel);
+                    param.setResult(skinModel);
+                    XposedBridge.log("[v2] skin applied: " + pick);
                 }
             });
             //endregion
