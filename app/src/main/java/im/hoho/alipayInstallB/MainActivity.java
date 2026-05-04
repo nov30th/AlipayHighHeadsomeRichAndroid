@@ -3,11 +3,10 @@ package im.hoho.alipayInstallB;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,60 +14,229 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.exception.ZipException;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.BufferedInputStream;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import im.hoho.alipayInstallB.skin.RemoteManifest;
+import im.hoho.alipayInstallB.skin.SkinEntry;
+import im.hoho.alipayInstallB.skin.SkinLibrary;
+import im.hoho.alipayInstallB.skin.SkinMigration;
+import im.hoho.alipayInstallB.skin.SkinPaths;
+
 public class MainActivity extends Activity {
 
-    private static final String EXTERNAL_STORAGE_PATH = Environment.getExternalStorageDirectory() + "/Android/media/com.eg.android.AlipayGphone/000_HOHO_ALIPAY_SKIN";
-    private static final String EXPORT_FILE = EXTERNAL_STORAGE_PATH + "/export";
-    private static final String DELETE_FILE = EXTERNAL_STORAGE_PATH + "/delete";
-    private static final String UPDATE_FILE = EXTERNAL_STORAGE_PATH + "/update";
-    private static final String ACTIVATE_FILE = EXTERNAL_STORAGE_PATH + "/actived";
     private static final int PERMISSION_REQUEST_CODE = 1001;
-    private static final String DOWNLOAD_URL = "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid/raw/master/SD%E5%8D%A1%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6%E5%8C%85/SD%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6.zip";
-    private static final String EXTRACT_PATH = Environment.getExternalStorageDirectory() + "/Android/media/com.eg.android.AlipayGphone/";
-    private final String[] memberGrades = {"原有", "普通 (primary)", "黄金 (golden)", "铂金 (platinum)", "钻石 (diamond)"};
-    private Button btnExport, btnDelete, btnUpdate, btnActivate;
-    private ImageView ivExportStatus, ivDeleteStatus, ivUpdateStatus, ivActivateStatus;
-    private Button btnDownload;
-    private ProgressBar progressBar;
-    private ExecutorService executorService;
-    private Handler mainHandler;
-    private Spinner spinnerMemberGrade;
+    private static final int REQUEST_PICK_ZIP = 2;
 
     private static final String PREFS_NAME = "AppPreferences";
     private static final String KEY_FIRST_RUN = "isFirstRun";
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限被授予
-                Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
+    private final String[] memberGrades = {"原有", "普通 (primary)", "黄金 (golden)", "铂金 (platinum)", "钻石 (diamond)"};
+
+    private RecyclerView rvSkins;
+    private TextView tvEmpty;
+    private final List<SkinModel> skinList = new ArrayList<>();
+    private SkinAdapter skinAdapter;
+    private MaterialButton btnUpdate, btnActivate, btnDownload, btnImportZip, btnDelete, btnExportBuiltin;
+    private ProgressBar progressBar;
+    private Spinner spinnerMemberGrade;
+    private ExecutorService executorService;
+    private Handler mainHandler;
+
+    private static final class BusyDialog {
+        final AlertDialog dialog;
+        final ProgressBar progressBar;
+        final TextView messageView;
+
+        BusyDialog(AlertDialog d, ProgressBar p, TextView m) {
+            dialog = d;
+            progressBar = p;
+            messageView = m;
+        }
+
+        void dismiss() {
+            if (dialog != null && dialog.isShowing()) dialog.dismiss();
+        }
+    }
+
+    static class SkinModel {
+        final String dirName;
+        final String displayName;
+        boolean isSelected;
+        String bgPath;
+        String logoPath;
+        String maskPath;
+        String themeColor;
+
+        SkinModel(SkinEntry e) {
+            this.dirName = e.dirName;
+            this.displayName = e.displayName;
+            this.isSelected = e.selected;
+        }
+
+        void parsePreview() {
+            File skinDir = new File(SkinPaths.skinsDir(), dirName);
+            File metaJsonFile = new File(skinDir, "meta.json");
+            if (!metaJsonFile.exists()) return;
+            try {
+                byte[] bytes = im.hoho.alipayInstallB.skin.SkinIO.readAllBytes(metaJsonFile);
+                JSONObject json = JSON.parseObject(new String(bytes, "UTF-8"));
+                if (json == null) return;
+                this.themeColor = json.getString("themeColor");
+                JSONArray resources = json.getJSONArray("resource");
+                if (resources == null) return;
+                for (int i = 0; i < resources.size(); i++) {
+                    JSONObject res = resources.getJSONObject(i);
+                    if (res == null) continue;
+                    String pos = res.getString("position");
+                    if ("z01.0001".equals(pos)) {
+                        JSONArray imageList = res.getJSONArray("imageList");
+                        if (imageList != null && imageList.size() > 0) {
+                            for (int j = 0; j < imageList.size(); j++) {
+                                JSONObject item = imageList.getJSONObject(j);
+                                String path = item == null ? null : item.getString("path");
+                                if (path != null && path.contains("2x1")) {
+                                    this.bgPath = resolve(skinDir, path);
+                                    break;
+                                }
+                            }
+                            if (this.bgPath == null) {
+                                JSONObject first = imageList.getJSONObject(0);
+                                if (first != null) this.bgPath = resolve(skinDir, first.getString("path"));
+                            }
+                        }
+                    } else if ("z02.0002".equals(pos)) {
+                        this.logoPath = resolve(skinDir, res.getString("image"));
+                    } else if ("z02.0003".equals(pos)) {
+                        this.maskPath = resolve(skinDir, res.getString("image"));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        private static String resolve(File dir, String name) {
+            if (name == null || name.isEmpty()) return null;
+            File f = new File(dir, name);
+            if (f.exists()) return f.getAbsolutePath();
+            File[] siblings = dir.listFiles();
+            if (siblings == null) return null;
+            for (File s : siblings) {
+                if (s.isFile() && s.getName().startsWith(name)) return s.getAbsolutePath();
+            }
+            return null;
+        }
+    }
+
+    class SkinAdapter extends RecyclerView.Adapter<SkinAdapter.ViewHolder> {
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.skin_item, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            final SkinModel skin = skinList.get(position);
+            holder.tvSkinName.setText(skin.displayName);
+            holder.tvSkinPath.setText("目录: " + skin.dirName);
+
+            holder.cbSelected.setOnCheckedChangeListener(null);
+            holder.cbSelected.setChecked(skin.isSelected);
+            holder.cbSelected.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                skin.isSelected = isChecked;
+                persistSelection();
+                holder.tvActiveBadge.setVisibility(skin.isSelected && SkinLibrary.isActived() ? View.VISIBLE : View.GONE);
+            });
+
+            int color;
+            try {
+                color = Color.parseColor(skin.themeColor != null ? skin.themeColor : "#108EE9");
+            } catch (Exception e) {
+                color = Color.parseColor("#108EE9");
+            }
+            holder.viewThemeAccent.setBackgroundColor(color);
+            holder.cbSelected.setButtonTintList(android.content.res.ColorStateList.valueOf(color));
+
+            if (skin.bgPath != null) {
+                Glide.with(MainActivity.this).load(new File(skin.bgPath)).into(holder.ivBackground);
             } else {
-                // 权限被拒绝
-                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
+                holder.ivBackground.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+
+            if (skin.logoPath != null) {
+                Glide.with(MainActivity.this).load(new File(skin.logoPath)).into(holder.ivLogo);
+                holder.ivLogo.setVisibility(View.VISIBLE);
+            } else {
+                holder.ivLogo.setVisibility(View.GONE);
+            }
+
+            if (skin.maskPath != null) {
+                Glide.with(MainActivity.this).load(new File(skin.maskPath)).into(holder.ivMask);
+                holder.ivMask.setVisibility(View.VISIBLE);
+            } else {
+                holder.ivMask.setVisibility(View.GONE);
+            }
+
+            holder.tvActiveBadge.setVisibility(skin.isSelected && SkinLibrary.isActived() ? View.VISIBLE : View.GONE);
+            holder.btnExportItem.setOnClickListener(v -> exportSkin(skin));
+            holder.btnDeleteItem.setOnClickListener(v -> confirmDeleteSkin(skin));
+        }
+
+        @Override
+        public int getItemCount() {
+            return skinList.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView ivBackground, ivLogo, ivMask;
+            TextView tvSkinName, tvSkinPath, tvActiveBadge;
+            CheckBox cbSelected;
+            ImageButton btnExportItem, btnDeleteItem;
+            View viewThemeAccent;
+
+            ViewHolder(View view) {
+                super(view);
+                ivBackground = view.findViewById(R.id.ivBackground);
+                ivLogo = view.findViewById(R.id.ivLogo);
+                ivMask = view.findViewById(R.id.ivMask);
+                tvSkinName = view.findViewById(R.id.tvSkinName);
+                tvSkinPath = view.findViewById(R.id.tvSkinPath);
+                tvActiveBadge = view.findViewById(R.id.tvActiveBadge);
+                cbSelected = view.findViewById(R.id.cbSelected);
+                btnExportItem = view.findViewById(R.id.btnExportItem);
+                btnDeleteItem = view.findViewById(R.id.btnDeleteItem);
+                viewThemeAccent = view.findViewById(R.id.viewThemeAccent);
             }
         }
     }
@@ -76,339 +244,508 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // 检查是否首次运行
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        boolean isFirstRun = settings.getBoolean(KEY_FIRST_RUN, true);
-
-        if (isFirstRun) {
-            new AlertDialog.Builder(this)
-                    .setTitle("隐私说明")
-                    .setMessage("本应用不会收集、不会上传任何用户信息或使用数据。\n\n" +
-                            "应用仅在本地运行，不会与任何服务器通信（除非您主动点击\"下载资源包\"按钮从 Github 下载资源）。\n\n" +
-                            "所有操作均在您的设备本地完成，请放心使用。")
-                    .setPositiveButton("我知道了", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // 标记已经显示过隐私说明
-                            SharedPreferences.Editor editor = settings.edit();
-                            editor.putBoolean(KEY_FIRST_RUN, false);
-                            editor.apply();
-                        }
-                    })
-                    .setCancelable(false)
-                    .show();
-        }
-
         setContentView(R.layout.activity_main);
-
-        spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
-        setupMemberGradeSpinner();
-
-
-        TextView tvVersion = findViewById(R.id.tvVersion);
-        tvVersion.setText("Version: " + BuildConfig.VERSION_NAME);
-
-        btnExport = findViewById(R.id.btnExport);
-        btnDelete = findViewById(R.id.btnDelete);
-        btnUpdate = findViewById(R.id.btnUpdate);
-        btnActivate = findViewById(R.id.btnActivate);
-
-        ivExportStatus = findViewById(R.id.ivExportStatus);
-        ivDeleteStatus = findViewById(R.id.ivDeleteStatus);
-        ivUpdateStatus = findViewById(R.id.ivUpdateStatus);
-        ivActivateStatus = findViewById(R.id.ivActivateStatus);
-
-        setupButtons();
-        updateStatuses();
-
-
-        btnDownload = findViewById(R.id.btnDownload);
-        progressBar = findViewById(R.id.progressBar);
 
         executorService = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
 
-        updateDownloadButtonText();
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        if (settings.getBoolean(KEY_FIRST_RUN, true)) {
+            showPrivacyDialog(settings);
+        }
 
-        btnDownload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                downloadAndExtract();
-            }
-        });
+        spinnerMemberGrade = findViewById(R.id.spinnerMemberGrade);
+        setupMemberGradeSpinner();
+        ((TextView) findViewById(R.id.tvVersion)).setText("Version: " + BuildConfig.VERSION_NAME);
 
-        Button btnOpenResourceFolder = findViewById(R.id.btnOpenResourceFolder);
-        TextView tvGithubLink = findViewById(R.id.tvGithubLink);
+        rvSkins = findViewById(R.id.rvSkins);
+        tvEmpty = findViewById(R.id.tvEmpty);
+        rvSkins.setLayoutManager(new LinearLayoutManager(this));
+        skinAdapter = new SkinAdapter();
+        rvSkins.setAdapter(skinAdapter);
 
-        btnOpenResourceFolder.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                File resourceFolder = new File(EXTRACT_PATH + "000_HOHO_ALIPAY_SKIN");
-                if (resourceFolder.exists() && resourceFolder.isDirectory()) {
-                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    Uri uri = Uri.parse(resourceFolder.getAbsolutePath());
-                    intent.setDataAndType(uri, "*/*");
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+        btnUpdate = findViewById(R.id.btnUpdate);
+        btnActivate = findViewById(R.id.btnActivate);
+        btnDownload = findViewById(R.id.btnDownload);
+        btnImportZip = findViewById(R.id.btnImportZip);
+        btnDelete = findViewById(R.id.btnDelete);
+        btnExportBuiltin = findViewById(R.id.btnExportBuiltin);
+        progressBar = findViewById(R.id.progressBar);
 
-                    try {
-                        startActivity(Intent.createChooser(intent, "选择文件浏览器"));
-                    } catch (ActivityNotFoundException e) {
-                        // 如果没有找到文件管理器应用，尝试使用 ACTION_VIEW
-                        intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setDataAndType(uri, "resource/folder");
+        setupButtons();
 
-                        if (intent.resolveActivityInfo(getPackageManager(), 0) != null) {
-                            startActivity(intent);
-                        } else {
-                            Toast.makeText(MainActivity.this, "没有找到文件浏览器应用", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                } else {
-                    Toast.makeText(MainActivity.this, "Resource package not installed", Toast.LENGTH_SHORT).show();
+        if (!checkStoragePermission()) {
+            requestStoragePermission();
+        } else {
+            initAfterPermission();
+        }
+    }
+
+    private void initAfterPermission() {
+        executorService.execute(() -> {
+            SkinMigration.Result mig = SkinMigration.runIfNeeded();
+            int cleaned = SkinLibrary.cleanupMissingSelections();
+            mainHandler.post(() -> {
+                if (mig.ran && (!mig.migrated.isEmpty() || !mig.failed.isEmpty())) {
+                    Toast.makeText(this,
+                            "迁移完成: 成功 " + mig.migrated.size() + ", 失败 " + mig.failed.size(),
+                            Toast.LENGTH_SHORT).show();
                 }
-            }
+                if (cleaned > 0) {
+                    Toast.makeText(this, "已清理 " + cleaned + " 个失效选中项", Toast.LENGTH_SHORT).show();
+                }
+                loadSkins();
+                refreshActivateButton();
+            });
         });
+    }
 
-        tvGithubLink.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String url = "https://github.com/nov30th/AlipayHighHeadsomeRichAndroid";
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(url));
-                startActivity(intent);
-            }
-        });
-
+    private void showPrivacyDialog(SharedPreferences settings) {
+        new AlertDialog.Builder(this)
+                .setTitle("隐私说明")
+                .setMessage("本应用不会收集、不会上传任何用户信息或使用数据。\n\n应用仅在本地运行，除非您点击\"下载更多\"。")
+                .setPositiveButton("我知道了", (dialog, which) -> settings.edit().putBoolean(KEY_FIRST_RUN, false).apply())
+                .setCancelable(false).show();
     }
 
     private void setupButtons() {
-        btnExport.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleFile(EXPORT_FILE);
+        btnUpdate.setOnClickListener(v -> doRequestUpdate());
+        btnActivate.setOnClickListener(v -> toggleActivated());
+        btnDelete.setOnClickListener(v -> confirmClearCache());
+        btnDownload.setOnClickListener(v -> openRemoteSkins());
+        btnImportZip.setOnClickListener(v -> selectZipForImport());
+        btnExportBuiltin.setOnClickListener(v -> doRequestBuiltinExport());
+    }
+
+    private void doRequestUpdate() {
+        persistSelection();
+        SkinLibrary.requestCacheUpdate();
+        Toast.makeText(this, "已计划更新缓存，重启支付宝付款码生效", Toast.LENGTH_SHORT).show();
+    }
+
+    private void toggleActivated() {
+        boolean target = !SkinLibrary.isActived();
+        SkinLibrary.setActived(target);
+        refreshActivateButton();
+        skinAdapter.notifyDataSetChanged();
+        Toast.makeText(this, target ? "已启用皮肤替换" : "已临时关闭皮肤替换", Toast.LENGTH_SHORT).show();
+    }
+
+    private void confirmClearCache() {
+        new AlertDialog.Builder(this)
+                .setTitle("清空 HOHO 缓存")
+                .setMessage("将在下次进入支付宝付款码时清空已下发的皮肤缓存（不影响皮肤库）。继续？")
+                .setPositiveButton("确定", (d, w) -> {
+                    SkinLibrary.requestCacheDelete();
+                    Toast.makeText(this, "已计划清空缓存，重启支付宝付款码生效", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null).show();
+    }
+
+    private void doRequestBuiltinExport() {
+        new AlertDialog.Builder(this)
+                .setTitle("导出支付宝内置皮肤")
+                .setMessage("将在下次进入支付宝付款码时，把当前账号已下发的内置皮肤自动写入 skins/ 皮肤库。\n\nzip 不会自动生成；需要在皮肤列表中对单个皮肤点导出，zip 会保存到 exports/ 文件夹。继续？")
+                .setPositiveButton("确定", (d, w) -> {
+                    SkinLibrary.requestBuiltinExport();
+                    Toast.makeText(this, "已计划导出到 skins/，请进入支付宝付款码后回到本页刷新", Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("取消", null).show();
+    }
+
+    private void refreshActivateButton() {
+        btnActivate.setText(SkinLibrary.isActived() ? "已启用 (点击关闭)" : "已关闭 (点击启用)");
+    }
+
+    private void loadSkins() {
+        executorService.execute(() -> {
+            List<SkinEntry> entries = SkinLibrary.listSkins();
+            List<SkinModel> built = new ArrayList<>(entries.size());
+            for (SkinEntry e : entries) {
+                SkinModel m = new SkinModel(e);
+                m.parsePreview();
+                built.add(m);
             }
+            mainHandler.post(() -> {
+                skinList.clear();
+                skinList.addAll(built);
+                skinAdapter.notifyDataSetChanged();
+                tvEmpty.setVisibility(skinList.isEmpty() ? View.VISIBLE : View.GONE);
+            });
         });
-        btnDelete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleFile(DELETE_FILE);
-            }
-        });
-        btnUpdate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleFile(UPDATE_FILE);
-            }
-        });
-        btnActivate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleFile(ACTIVATE_FILE);
+    }
+
+    private void persistSelection() {
+        List<String> selected = new ArrayList<>();
+        for (SkinModel skin : skinList) {
+            if (skin.isSelected) selected.add(skin.dirName);
+        }
+        executorService.execute(() -> {
+            try {
+                SkinLibrary.saveSelected(selected);
+            } catch (Exception e) {
+                mainHandler.post(() ->
+                        Toast.makeText(this, "保存选中失败: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
         });
     }
 
-    private void toggleFile(String filePath) {
-        File file = new File(filePath);
-        if (file.exists()) {
-            file.delete();
+    private void exportSkin(SkinModel skin) {
+        progressBar.setVisibility(View.VISIBLE);
+        executorService.execute(() -> {
+            SkinLibrary.ExportResult r = SkinLibrary.exportZip(skin.dirName);
+            mainHandler.post(() -> {
+                progressBar.setVisibility(View.GONE);
+                if (r.success) {
+                    Toast.makeText(this, "导出成功: exports/" + r.zipFile.getName(), Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "导出失败: " + r.message, Toast.LENGTH_LONG).show();
+                }
+            });
+        });
+    }
+
+    private void confirmDeleteSkin(SkinModel skin) {
+        new AlertDialog.Builder(this)
+                .setTitle("删除皮肤")
+                .setMessage("确定删除 \"" + skin.displayName + "\" (" + skin.dirName + ") ？\n同时移除选中和已导出的 zip。")
+                .setPositiveButton("删除", (dialog, which) -> executorService.execute(() -> {
+                    boolean ok = SkinLibrary.deleteSkin(skin.dirName);
+                    mainHandler.post(() -> {
+                        Toast.makeText(this, ok ? "已删除" : "删除失败", Toast.LENGTH_SHORT).show();
+                        loadSkins();
+                    });
+                }))
+                .setNegativeButton("取消", null).show();
+    }
+
+    private boolean checkStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) return Environment.isExternalStorageManager();
+        return checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            new AlertDialog.Builder(this)
+                    .setTitle("需要存储权限")
+                    .setMessage("管理皮肤库需要\"所有文件访问\"权限，请在系统设置中授权。")
+                    .setPositiveButton("去授权", (d, w) -> {
+                        try {
+                            Intent i = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                    Uri.parse("package:" + getPackageName()));
+                            startActivity(i);
+                        } catch (Exception e) {
+                            startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+                        }
+                    })
+                    .setNegativeButton("取消", null).show();
         } else {
-            try {
-                new File(EXTERNAL_STORAGE_PATH).mkdirs();
-                new File(filePath).mkdirs();
-//                file.createNewFile();
-            } catch (Exception e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Error creating file", Toast.LENGTH_SHORT).show();
-            }
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
         }
-        updateStatuses();
-        Toast.makeText(this, "Reopen payment code to take effect", Toast.LENGTH_SHORT).show();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        updateStatuses();
-        updateDownloadButtonText();
-    }
-
-    private void updateStatuses() {
-        updateStatus(ivExportStatus, EXPORT_FILE);
-        updateStatus(ivDeleteStatus, DELETE_FILE);
-        updateStatus(ivUpdateStatus, UPDATE_FILE);
-        updateStatus(ivActivateStatus, ACTIVATE_FILE);
-
-        btnActivate.setText(new File(ACTIVATE_FILE).exists() ? "点击禁用皮肤" : "点击启用皮肤");
-    }
-
-    private void updateStatus(ImageView imageView, String filePath) {
-        imageView.setImageResource(new File(filePath).exists() ? R.drawable.green_circle : R.drawable.red_circle);
-    }
-
-    private void updateDownloadButtonText() {
-        File skinFolder = new File(EXTRACT_PATH + "000_HOHO_ALIPAY_SKIN");
-        btnDownload.setText(skinFolder.exists() ? "重新下载资源包 (Github) 需要SD卡权限" : "下载资源包 (Github) 需要SD卡权限");
-    }
-
-    private void downloadAndExtract() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                intent.setData(uri);
-                startActivity(intent);
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-            }
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE && checkStoragePermission()) {
+            initAfterPermission();
         }
+    }
 
-        btnDownload.setEnabled(false);
+    private void selectZipForImport() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("application/zip");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(Intent.createChooser(intent, "选择皮肤 zip"), REQUEST_PICK_ZIP);
+        } catch (Exception e) {
+            Toast.makeText(this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_ZIP && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            importFromUri(data.getData());
+        }
+    }
+
+    private void importFromUri(Uri uri) {
         progressBar.setVisibility(View.VISIBLE);
-        progressBar.setProgress(0);
+        executorService.execute(() -> {
+            File tmp = new File(getCacheDir(), "import_" + System.currentTimeMillis() + ".zip");
+            try (InputStream is = getContentResolver().openInputStream(uri);
+                 FileOutputStream fos = new FileOutputStream(tmp)) {
+                if (is == null) throw new Exception("无法读取文件");
+                byte[] buf = new byte[8192];
+                int r;
+                while ((r = is.read(buf)) != -1) fos.write(buf, 0, r);
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "读取 zip 失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+                tmp.delete();
+                return;
+            }
+            SkinLibrary.ImportResult r = SkinLibrary.importZip(tmp);
+            tmp.delete();
+            mainHandler.post(() -> {
+                progressBar.setVisibility(View.GONE);
+                if (r.success) {
+                    Toast.makeText(this, "导入成功: " + r.dirName, Toast.LENGTH_SHORT).show();
+                    loadSkins();
+                } else {
+                    Toast.makeText(this, "导入失败: " + r.message, Toast.LENGTH_LONG).show();
+                }
+            });
+        });
+    }
 
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    URL url = new URL(DOWNLOAD_URL);
-                    URLConnection connection = url.openConnection();
-                    connection.connect();
+    private void openRemoteSkins() {
+        BusyDialog loading = showBusyDialog(
+                "正在读取在线皮肤 (Github)",
+                "正在连接 Github 并读取皮肤列表，网络较慢时请稍候。",
+                false);
+        btnDownload.setEnabled(false);
+        executorService.execute(() -> {
+            try {
+                String json = RemoteManifest.downloadManifest(SkinPaths.REMOTE_MANIFEST_URL);
+                RemoteManifest manifest = RemoteManifest.parse(json);
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    btnDownload.setEnabled(true);
+                    showRemoteSkinsDialog(manifest);
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    btnDownload.setEnabled(true);
+                    Toast.makeText(this, "连接失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
 
-                    int fileLength = connection.getContentLength();
+    private void showRemoteSkinsDialog(RemoteManifest manifest) {
+        if (manifest.notice != null && (manifest.notice.message != null || manifest.notice.title != null)) {
+            String title = manifest.notice.title != null ? manifest.notice.title : "公告";
+            StringBuilder msg = new StringBuilder();
+            if (manifest.notice.message != null) msg.append(manifest.notice.message);
+            if (manifest.notice.updatedAt != null) {
+                if (msg.length() > 0) msg.append("\n\n");
+                msg.append("更新时间: ").append(manifest.notice.updatedAt);
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setMessage(msg.toString())
+                    .setPositiveButton("查看皮肤列表", (d, w) -> showRemoteSkinsList(manifest))
+                    .setNegativeButton("取消", null)
+                    .show();
+        } else {
+            showRemoteSkinsList(manifest);
+        }
+    }
 
-                    InputStream input = new BufferedInputStream(url.openStream());
-                    OutputStream output = new FileOutputStream(EXTRACT_PATH + "temp.zip");
+    private void showRemoteSkinsList(RemoteManifest manifest) {
+        final List<RemoteManifest.RemoteSkin> items = uniqueRemoteSkins(manifest.skins);
+        if (items.isEmpty()) {
+            Toast.makeText(this, "远程没有可用皮肤", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ArrayAdapter<RemoteManifest.RemoteSkin> adapter =
+                new ArrayAdapter<RemoteManifest.RemoteSkin>(this, R.layout.remote_skin_item, items) {
+                    @NonNull
+                    @Override
+                    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                        View view = convertView;
+                        if (view == null) {
+                            view = LayoutInflater.from(getContext())
+                                    .inflate(R.layout.remote_skin_item, parent, false);
+                        }
+                        RemoteManifest.RemoteSkin s = getItem(position);
+                        TextView name = view.findViewById(R.id.tvRemoteSkinName);
+                        TextView desc = view.findViewById(R.id.tvRemoteSkinDescription);
+                        TextView file = view.findViewById(R.id.tvRemoteSkinFile);
 
-                    byte[] data = new byte[1024];
-                    long total = 0;
-                    int count;
-                    while ((count = input.read(data)) != -1) {
-                        total += count;
-                        final int progress = (int) (total * 100 / fileLength);
-                        mainHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setProgress(progress);
-                            }
-                        });
-                        output.write(data, 0, count);
+                        String displayName = s != null && s.name != null && !s.name.trim().isEmpty()
+                                ? s.name.trim()
+                                : (s != null ? s.file : "");
+                        name.setText(displayName);
+
+                        String description = s == null ? null : cleanRemoteDescription(s);
+                        if (description == null || description.isEmpty()) {
+                            desc.setVisibility(View.GONE);
+                        } else {
+                            desc.setVisibility(View.VISIBLE);
+                            desc.setText(description);
+                        }
+
+                        file.setText(s != null ? s.file : "");
+                        return view;
                     }
+                };
+        new AlertDialog.Builder(this)
+                .setTitle("在线皮肤")
+                .setAdapter(adapter, (d, w) -> downloadRemoteSkin(items.get(w)))
+                .setNegativeButton("取消", null)
+                .show();
+    }
 
-                    output.flush();
-                    output.close();
-                    input.close();
+    private void downloadRemoteSkin(RemoteManifest.RemoteSkin s) {
+        String title = s.name != null && !s.name.trim().isEmpty() ? s.name.trim() : s.file;
+        BusyDialog loading = showBusyDialog("正在下载皮肤 (Github)", title + "\n准备从 Github 下载...", true);
+        executorService.execute(() -> {
+            try {
+                File zip = RemoteManifest.downloadSkinZip(SkinPaths.REMOTE_MANIFEST_URL, s.file,
+                        pct -> mainHandler.post(() -> {
+                            loading.progressBar.setProgress(pct);
+                            loading.messageView.setText(title + "\n正在从 Github 下载，已完成 " + pct + "%");
+                        }));
+                SkinLibrary.ImportResult r = SkinLibrary.importZip(zip);
+                zip.delete();
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    if (r.success) {
+                        Toast.makeText(this, "下载并导入成功: " + r.dirName, Toast.LENGTH_SHORT).show();
+                        loadSkins();
+                    } else {
+                        Toast.makeText(this, "导入失败: " + r.message, Toast.LENGTH_LONG).show();
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    loading.dismiss();
+                    Toast.makeText(this, "下载失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
 
-                    // 解压文件
-                    unzip(EXTRACT_PATH + "temp.zip", EXTRACT_PATH);
+    private BusyDialog showBusyDialog(String title, String message, boolean determinate) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int padding = dp(24);
+        box.setPadding(padding, dp(8), padding, dp(4));
 
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            btnDownload.setEnabled(true);
-                            progressBar.setVisibility(View.GONE);
-                            Toast.makeText(MainActivity.this, "Download and extraction completed", Toast.LENGTH_LONG).show();
-                            updateDownloadButtonText();
-                        }
-                    });
-                } catch (final Exception e) {
-                    mainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            btnDownload.setEnabled(true);
-                            progressBar.setVisibility(View.GONE);
-                            Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    });
+        TextView messageView = new TextView(this);
+        messageView.setText(message);
+        messageView.setTextColor(Color.parseColor("#555555"));
+        messageView.setTextSize(14);
+        messageView.setLineSpacing(dp(2), 1.0f);
+
+        ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setIndeterminate(!determinate);
+        bar.setMax(100);
+        if (determinate) bar.setProgress(0);
+
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        barLp.topMargin = dp(18);
+
+        box.addView(messageView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        box.addView(bar, barLp);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(box)
+                .setCancelable(false)
+                .create();
+        dialog.show();
+        return new BusyDialog(dialog, bar, messageView);
+    }
+
+    private List<RemoteManifest.RemoteSkin> uniqueRemoteSkins(List<RemoteManifest.RemoteSkin> source) {
+        List<RemoteManifest.RemoteSkin> out = new ArrayList<>();
+        for (RemoteManifest.RemoteSkin skin : source) {
+            if (skin == null || skin.file == null) continue;
+            boolean exists = false;
+            for (RemoteManifest.RemoteSkin added : out) {
+                if (skin.file.equalsIgnoreCase(added.file)) {
+                    exists = true;
+                    break;
                 }
             }
-        });
+            if (!exists) out.add(skin);
+        }
+        return out;
     }
 
-    public void unzip(String zipFilePath, String destDirectory) {
-        try {
-            ZipFile zipFile = new ZipFile(zipFilePath);
-            zipFile.extractAll(destDirectory);
-        } catch (ZipException e) {
-            e.printStackTrace();
-            // 处理异常
-        }
+    private String cleanRemoteDescription(RemoteManifest.RemoteSkin s) {
+        if (s.description == null) return null;
+        String desc = s.description.trim();
+        if (desc.isEmpty()) return null;
+        String name = s.name == null ? "" : s.name.trim();
+        if (desc.equals(name)) return null;
+        return desc;
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (executorService != null) {
-            executorService.shutdown();
-        }
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void setupMemberGradeSpinner() {
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, memberGrades);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerMemberGrade.setAdapter(adapter);
-
-        // 设置当前选中的等级
-        String currentGrade = getCurrentMemberGrade();
-        int position = adapter.getPosition(currentGrade);
-        spinnerMemberGrade.setSelection(position);
-
+        ArrayAdapter<String> a = new ArrayAdapter<>(this, R.layout.member_grade_spinner_item, memberGrades);
+        a.setDropDownViewResource(R.layout.member_grade_spinner_dropdown_item);
+        spinnerMemberGrade.setAdapter(a);
+        String g = getCurrentMemberGrade();
+        spinnerMemberGrade.setSelection(a.getPosition(g));
         spinnerMemberGrade.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedGrade = parent.getItemAtPosition(position).toString();
-                updateMemberGrade(selectedGrade);
+            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                updateMemberGrade(p.getItemAtPosition(pos).toString());
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
+            public void onNothingSelected(AdapterView<?> p) {
             }
         });
     }
 
     private String getCurrentMemberGrade() {
-        for (String grade : memberGrades) {
-            if (grade.equals("原有")) continue;
-            String folderName = "level_" + grade.split(" ")[1].replace("(", "").replace(")", "");
-            File folder = new File(EXTERNAL_STORAGE_PATH, folderName);
-            if (folder.exists()) {
-                return grade;
-            }
+        File root = SkinPaths.root();
+        for (String g : memberGrades) {
+            if (g.equals("原有")) continue;
+            String key = extractGradeKey(g);
+            if (key != null && new File(root, "level_" + key).exists()) return g;
         }
         return "原有";
     }
 
-    private void updateMemberGrade(String selectedGrade) {
-        // 删除所有 level_ 文件夹
-        for (String grade : memberGrades) {
-            if (grade.equals("原有")) continue;
-            String folderName = "level_" + grade.split(" ")[1].replace("(", "").replace(")", "");
-            File folder = new File(EXTERNAL_STORAGE_PATH, folderName);
-            if (folder.exists()) {
-                deleteRecursive(folder);
-            }
+    private void updateMemberGrade(String g) {
+        File root = SkinPaths.root();
+        if (!root.exists()) root.mkdirs();
+        for (String gr : memberGrades) {
+            if (gr.equals("原有")) continue;
+            String key = extractGradeKey(gr);
+            if (key == null) continue;
+            File f = new File(root, "level_" + key);
+            if (f.exists()) im.hoho.alipayInstallB.skin.SkinIO.deleteRecursive(f);
         }
-
-        // 如果选择不是"原有"，创建新的 level_ 文件夹
-        if (!selectedGrade.equals("原有")) {
-            String folderName = "level_" + selectedGrade.split(" ")[1].replace("(", "").replace(")", "");
-            File newFolder = new File(EXTERNAL_STORAGE_PATH, folderName);
-            newFolder.mkdirs();
+        if (!g.equals("原有")) {
+            String key = extractGradeKey(g);
+            if (key != null) new File(root, "level_" + key).mkdirs();
         }
-
-        Toast.makeText(this, "会员等级已更新为：" + selectedGrade, Toast.LENGTH_SHORT).show();
     }
 
-    private void deleteRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            for (File child : fileOrDirectory.listFiles()) {
-                deleteRecursive(child);
-            }
+    private static String extractGradeKey(String label) {
+        int l = label.indexOf('(');
+        int r = label.indexOf(')');
+        if (l < 0 || r < 0 || r <= l) return null;
+        return label.substring(l + 1, r).trim();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (checkStoragePermission()) {
+            loadSkins();
+            refreshActivateButton();
         }
-        fileOrDirectory.delete();
     }
 }

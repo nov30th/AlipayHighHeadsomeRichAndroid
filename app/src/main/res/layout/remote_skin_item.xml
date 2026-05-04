@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="82dp"
+    android:orientation="vertical"
+    android:paddingHorizontal="22dp"
+    android:paddingVertical="14dp">
+
+    <TextView
+        android:id="@+id/tvRemoteSkinName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#222222"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="阿狸-新春花灯会" />
+
+    <TextView
+        android:id="@+id/tvRemoteSkinDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="#666666"
+        android:textSize="14sp"
+        tools:text="财富黑卡专享支付宝皮肤" />
+
+    <TextView
+        android:id="@+id/tvRemoteSkinFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="#999999"
+        android:textSize="12sp"
+        tools:text="Ali.zip" />
+
+</LinearLayout>
