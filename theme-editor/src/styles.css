@@ -36,6 +36,22 @@ button:disabled {
   min-height: 100vh;
 }
 
+.copyright {
+  padding: 16px 24px 20px;
+  text-align: center;
+  color: #6b7788;
+  font-size: 12px;
+}
+
+.copyright a {
+  color: #1677ff;
+  text-decoration: none;
+}
+
+.copyright a:hover {
+  text-decoration: underline;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -392,7 +408,7 @@ button:disabled {
 }
 
 .pay-card {
-  overflow: hidden;
+  position: relative;
   width: 82%;
   background: #fff;
   border-radius: 16px;
@@ -403,24 +419,52 @@ button:disabled {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 78px;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 16px;
+  border-radius: 16px 16px 0 0;
+}
+
+.member-label {
+  font-size: 10px;
+  /* font-weight: 100; */
+  color: #FFFFFF;
+  letter-spacing: 0.2px;
+  z-index: 2;
+}
+
+.logo-cradle {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 112px;
+  height: 30px;
+  border-radius: 50%;
+  pointer-events: none;
+  background-size: 450% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 1;
 }
 
 .logo {
-  max-width: 136px;
-  max-height: 48px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -52%);
+  width: 100px;
+  height: 100px;
   object-fit: contain;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .mask {
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 78px;
-  max-width: 92px;
-  object-fit: cover;
-  opacity: 0.78;
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  transform: translateX(15%);
 }
 
 .qr {

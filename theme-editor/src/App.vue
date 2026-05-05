@@ -57,6 +57,13 @@ function gradient(position, key, fallback) {
   return findResource('skin', position)?.gradient?.[key] || fallback;
 }
 
+function skinImageFor(position) {
+  const resource = findResource('skin', position);
+  if (!resource) return '';
+  const name = resourceImage(resource);
+  return name ? imageUrl('skin', name) : '';
+}
+
 function imageUrl(area, name) {
   if (!data.value || !name) return '';
   return `${data.value.assetsBase}/${encodeURIComponent(area)}/${encodeAssetPath(name)}?v=${cacheBust.value}`;
@@ -592,8 +599,15 @@ loadLibrary();
                     background: `linear-gradient(90deg, ${gradient('z02.0001', 'start', '#D9B58D')}, ${gradient('z02.0001', 'end', '#F9ECD2')})`,
                   }"
                 >
-                  <img class="logo" :src="imageUrl('skin', 'logo')" alt="" />
-                  <img class="mask" :src="imageUrl('skin', 'mask')" alt="" />
+                  <span class="member-label">Diamond Member</span>
+                  <span
+                    class="logo-cradle"
+                    :style="{
+                      backgroundImage: `linear-gradient(90deg, ${gradient('z02.0001', 'start', '#D9B58D')}, ${gradient('z02.0001', 'end', '#F9ECD2')})`,
+                    }"
+                  ></span>
+                  <img class="logo" :src="skinImageFor('z02.0002')" alt="" />
+                  <img class="mask" :src="skinImageFor('z02.0003')" alt="" />
                 </header>
                 <div class="barcode"></div>
                 <div class="qr"></div>
@@ -603,6 +617,11 @@ loadLibrary();
         </div>
       </section>
     </section>
+
+    <footer class="copyright">
+      Author:
+      <a href="https://github.com/nov30th/AlipayHighHeadsomeRichAndroid" target="_blank" rel="noopener noreferrer">Nov30th, HOHO``</a>
+    </footer>
 
     <div v-if="cropState.open" class="crop-modal" @pointerup="finishCrop">
       <section class="crop-dialog">
