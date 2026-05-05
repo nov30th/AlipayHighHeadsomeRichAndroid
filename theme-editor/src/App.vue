@@ -82,6 +82,17 @@ const homeActions = computed(() => [
   ['home_pocket_icon', 'Cards'],
 ]);
 
+const tabBarBgImage = computed(() => {
+  const list = resources('theme');
+  const resource = list.find((item) => {
+    const pos = String(item?.position || '');
+    return (pos === 'tab_bar_bg' || pos.startsWith('tab_bar_bg_')) && resourceKind(item) === 'image';
+  });
+  if (!resource) return '';
+  const name = resourceImage(resource);
+  return name ? imageUrl('theme', name) : '';
+});
+
 const tabItems = computed(() => [
   ['tab_bar_home_icon_selected', 'Home'],
   ['tab_bar_wealth_icon_normal', 'Wealth'],
@@ -543,13 +554,12 @@ loadLibrary();
               }"
             >
               <span>{{ activeView === 'me' ? 'Me' : 'Alipay' }}</span>
-              <strong>{{ activeView === 'me' ? 'Account Center' : 'Pay Collect Scan' }}</strong>
-            </div>
-
-            <div class="quick-actions">
-              <div v-for="[icon, label] in homeActions" :key="icon">
-                <img :src="imageUrl('theme', icon)" alt="" />
-                <span>{{ label }}</span>
+              <div v-if="activeView === 'me'" class="navi-title">Account Center</div>
+              <div v-else class="navi-actions">
+                <div v-for="[icon, label] in homeActions" :key="icon">
+                  <img :src="imageUrl('theme', icon)" alt="" />
+                  <span>{{ label }}</span>
+                </div>
               </div>
             </div>
 
@@ -559,7 +569,12 @@ loadLibrary();
               <div></div>
             </div>
 
-            <nav class="tabbar" :style="{ backgroundColor: color('tab_bar_theme_color') }">
+            <nav
+              class="tabbar"
+              :style="tabBarBgImage
+                ? { backgroundImage: `url(${tabBarBgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat' }
+                : { backgroundColor: color('home_navi_theme_fg_color', '#ffffff') }"
+            >
               <div v-for="[icon, label] in tabItems" :key="icon">
                 <img :src="imageUrl('theme', icon)" alt="" />
                 <span :style="{ color: icon.includes('selected') ? color('tab_bar_text_color_selected') : color('tab_bar_text_color_normal') }">

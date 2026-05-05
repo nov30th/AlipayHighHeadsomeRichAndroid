@@ -310,37 +310,33 @@ button:disabled {
 }
 
 .navi {
-  height: 180px;
-  padding: 38px 22px 20px;
+  padding: 38px 22px 22px;
   background-position: center;
   background-size: cover;
 }
 
-.navi span {
+.navi > span {
   display: block;
   font-size: 16px;
   opacity: 0.9;
 }
 
-.navi strong {
-  display: block;
+.navi-title {
   margin-top: 18px;
   font-size: 25px;
   line-height: 1.15;
+  font-weight: 700;
 }
 
-.quick-actions {
+.navi-actions {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin: -34px 18px 16px;
-  padding: 15px 8px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(23, 32, 42, 0.12);
+  margin-top: 22px;
+  padding: 4px 0 6px;
 }
 
-.quick-actions div,
+.navi-actions div,
 .tabbar div {
   display: grid;
   justify-items: center;
@@ -349,15 +345,16 @@ button:disabled {
   font-size: 11px;
 }
 
-.quick-actions img {
-  width: 34px;
-  height: 34px;
+.navi-actions img {
+  width: 38px;
+  height: 38px;
   object-fit: contain;
 }
 
 .content-blocks {
   display: grid;
   gap: 12px;
+  margin-top: 16px;
   padding: 0 18px;
 }
 
