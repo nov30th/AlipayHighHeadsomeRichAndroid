@@ -8,7 +8,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 33
         versionCode 123
-        versionName "2.6.6"
+        versionName "2.6.7"
     }
     namespace 'im.hoho.alipayInstallB'
     buildToolsVersion '34.0.0'
