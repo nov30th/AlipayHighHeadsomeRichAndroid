@@ -137,7 +137,7 @@ public final class EditorService extends Service {
         PendingIntent stopIntent = PendingIntent.getService(this, 1, stop, piFlags);
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("皮肤修改器运行中")
                 .setContentText(EditorAddress.displayUrl())
                 .setPriority(NotificationCompat.PRIORITY_LOW)
