@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
+import im.hoho.alipayInstallB.skin.SelectedSkins;
 import im.hoho.alipayInstallB.skin.SkinIO;
+import im.hoho.alipayInstallB.skin.SkinLibrary;
 import im.hoho.alipayInstallB.skin.SkinMeta;
 import im.hoho.alipayInstallB.skin.SkinPaths;
 
@@ -126,6 +128,12 @@ public final class EditorHttpServer extends NanoHTTPD {
             }
         }
 
+        if (parts.length == 3 && "activate".equals(parts[2])) {
+            if (method != Method.POST) return jsonError(Response.Status.METHOD_NOT_ALLOWED, "Use POST");
+            activateAndApply(session, kind, dirName, itemDir);
+            return json(Response.Status.OK, ok());
+        }
+
         if (parts.length == 4 && "assets".equals(parts[2])) {
             String[] assetParts = parts[3].split("/", 2);
             if (assetParts.length != 2) return jsonError(Response.Status.BAD_REQUEST, "Missing asset area or path");
@@ -224,6 +232,26 @@ public final class EditorHttpServer extends NanoHTTPD {
             arr.add(item);
         }
         return arr;
+    }
+
+    private void activateAndApply(IHTTPSession session, String kind, String dirName, File itemDir) throws Exception {
+        try {
+            saveMetadata(session, kind, itemDir);
+        } catch (Exception ignored) {
+        }
+        if ("themes".equals(kind)) {
+            SkinLibrary.saveSelectedTheme(dirName);
+            SkinLibrary.requestCacheDelete();
+            SkinLibrary.requestThemeUpdate();
+        } else {
+            java.util.List<String> selected = new java.util.ArrayList<>(
+                    SelectedSkins.read(SkinPaths.selectedSkinsJson()));
+            if (!selected.contains(dirName)) selected.add(dirName);
+            SkinLibrary.saveSelected(selected);
+            SkinLibrary.requestCacheDelete();
+            SkinLibrary.requestCacheUpdate();
+        }
+        SkinLibrary.setActived(true);
     }
 
     private void saveMetadata(IHTTPSession session, String kind, File itemDir) throws Exception {

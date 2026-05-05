@@ -64,6 +64,17 @@ function skinImageFor(position) {
   return name ? imageUrl('skin', name) : '';
 }
 
+function paymentBgUrl() {
+  const resource = findResource('skin', 'z01.0001');
+  if (resource?.imageList?.length) {
+    const match = resource.imageList.find((item) => String(item?.path || '').includes('2x1'))
+      || resource.imageList[0];
+    if (match?.path) return imageUrl('skin', match.path);
+  }
+  if (resource?.image) return imageUrl('skin', resource.image);
+  return imageUrl('skin', 'background_2x1');
+}
+
 function imageUrl(area, name) {
   if (!data.value || !name) return '';
   return `${data.value.assetsBase}/${encodeURIComponent(area)}/${encodeAssetPath(name)}?v=${cacheBust.value}`;
@@ -101,11 +112,11 @@ const tabBarBgImage = computed(() => {
 });
 
 const tabItems = computed(() => [
-  ['tab_bar_home_icon_selected', 'Home'],
-  ['tab_bar_wealth_icon_normal', 'Wealth'],
-  ['tab_bar_life_icon_normal', 'Life'],
-  ['tab_bar_msg_icon_normal', 'Messages'],
-  ['tab_bar_mime_icon_normal', 'Me'],
+  { base: 'tab_bar_home_icon', label: 'Home' },
+  { base: 'tab_bar_wealth_icon', label: 'Wealth' },
+  { base: 'tab_bar_life_icon', label: 'Life' },
+  { base: 'tab_bar_msg_icon', label: 'Messages' },
+  { base: 'tab_bar_mime_icon', label: 'Me' },
 ]);
 
 const editableResources = computed(() => {
@@ -400,9 +411,59 @@ async function saveCrop() {
   }
 }
 
-function downloadZip() {
+async function downloadZip() {
   if (libraryMode.value || !sessionId.value) return;
-  window.location.href = `/api/sessions/${sessionId.value}/download`;
+  try {
+    saving.value = true;
+    status.value = 'Saving edits before download...';
+    const response = await fetch(themeUrl(), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        theme: { resource: resources('theme') },
+        skin: { resource: resources('skin') },
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'Save failed');
+    }
+    status.value = 'Downloading ZIP...';
+    window.location.href = `/api/sessions/${sessionId.value}/download`;
+  } catch (error) {
+    status.value = error.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function activateAndApply() {
+  if (!libraryMode.value || !data.value) return;
+  try {
+    saving.value = true;
+    status.value = 'Activating and applying theme...';
+    const url = `/api/library/${encodeURIComponent(data.value.kind)}/${encodeURIComponent(data.value.dirName)}/activate`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        theme: { resource: resources('theme') },
+        skin: { resource: resources('skin') },
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'Activate failed');
+    }
+    status.value = 'Activated. Please reopen Alipay so the new theme is copied in.';
+    if (typeof window !== 'undefined') {
+      window.alert('Theme activated and applied.\n\nPlease fully close and reopen Alipay so the new theme is copied in.');
+    }
+  } catch (error) {
+    status.value = error.message;
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function copyDebug() {
@@ -412,6 +473,44 @@ async function copyDebug() {
     status.value = 'Debug info copied to clipboard.';
   } catch (_error) {
     status.value = 'Copy failed - select the text manually.';
+  }
+}
+
+function openSiblingColorPicker(event) {
+  const target = event.currentTarget;
+  const sibling = target?.parentElement?.querySelector('input[type="color"]');
+  if (!sibling) return;
+  if (typeof sibling.showPicker === 'function') {
+    try {
+      sibling.showPicker();
+      return;
+    } catch (_error) {
+      // fall through to click fallback
+    }
+  }
+  sibling.click();
+}
+
+async function downloadAsset(area, resource) {
+  const assetName = resourceImage(resource);
+  if (!assetName) return;
+  try {
+    const url = imageUrl(area, assetName);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const baseName = String(assetName).split('/').pop() || assetName;
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = baseName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    status.value = `Downloaded ${baseName}.`;
+  } catch (error) {
+    status.value = error.message;
   }
 }
 
@@ -430,16 +529,17 @@ loadLibrary();
   <main class="workspace">
     <header class="topbar">
       <div>
-        <h1>Alipay Theme Editor</h1>
+        <h1>Alipay Theme Editor (Beta)</h1>
         <p>{{ status }}</p>
       </div>
       <div class="actions">
-        <label class="upload-button">
+        <label v-if="!libraryMode" class="upload-button">
           Upload ZIP
           <input type="file" accept=".zip,application/zip" @change="uploadZip" />
         </label>
-        <button class="primary" :disabled="saving || !data" @click="saveTheme">Save</button>
-        <button v-if="!libraryMode" :disabled="!data" @click="downloadZip">Download ZIP</button>
+        <button v-if="libraryMode" class="primary" :disabled="saving || !data" @click="activateAndApply">Activate &amp; Apply</button>
+        <button v-if="libraryMode" :disabled="saving || !data" @click="saveTheme">Save</button>
+        <button v-if="!libraryMode" class="primary" :disabled="saving || !data" @click="downloadZip">Download ZIP</button>
         <button :disabled="!data" @click="cancelEdit">Cancel Edit</button>
         <button @click="debug.open = !debug.open">{{ debug.open ? 'Hide Debug' : 'Debug' }}</button>
       </div>
@@ -513,7 +613,11 @@ loadLibrary();
 
             <label v-if="resourceKind(resource) === 'color'" class="color-control">
               <input v-model="resource.color" type="color" />
-              <input v-model="resource.color" />
+              <input
+                v-model="resource.color"
+                @focus="openSiblingColorPicker"
+                @click="openSiblingColorPicker"
+              />
             </label>
 
             <div v-else-if="resourceKind(resource) === 'gradient'" class="gradient-control">
@@ -528,7 +632,12 @@ loadLibrary();
             </div>
 
             <div v-else class="image-control">
-              <img :src="imageUrl(mode, resourceImage(resource))" alt="" />
+              <img
+                :src="imageUrl(mode, resourceImage(resource))"
+                alt=""
+                title="Click to download"
+                @click="downloadAsset(mode, resource)"
+              />
               <label class="file-button">
                 Replace
                 <input type="file" accept="image/*" @change="uploadAsset(mode, resource, $event)" />
@@ -582,30 +691,34 @@ loadLibrary();
                 ? { backgroundImage: `url(${tabBarBgImage})`, backgroundSize: '100% 100%', backgroundRepeat: 'no-repeat' }
                 : { backgroundColor: color('home_navi_theme_fg_color', '#ffffff') }"
             >
-              <div v-for="[icon, label] in tabItems" :key="icon">
-                <img :src="imageUrl('theme', icon)" alt="" />
-                <span :style="{ color: icon.includes('selected') ? color('tab_bar_text_color_selected') : color('tab_bar_text_color_normal') }">
-                  {{ label }}
+              <div v-for="item in tabItems" :key="item.base" :class="['tab-item', { active: item.active }]">
+                <span class="tab-icon">
+                  <img class="icon-normal" :src="imageUrl('theme', `${item.base}_normal`)" alt="" />
+                  <img class="icon-selected" :src="imageUrl('theme', `${item.base}_selected`)" alt="" />
+                </span>
+                <span
+                  class="tab-label"
+                  :style="{
+                    '--tab-color-normal': color('tab_bar_text_color_normal'),
+                    '--tab-color-selected': color('tab_bar_text_color_selected'),
+                  }"
+                >
+                  {{ item.label }}
                 </span>
               </div>
             </nav>
           </template>
 
           <template v-else>
-            <div class="payment-bg" :style="{ backgroundImage: `url(${imageUrl('skin', 'background_2x1')})` }">
-              <section class="pay-card">
-                <header
-                  :style="{
-                    background: `linear-gradient(90deg, ${gradient('z02.0001', 'start', '#D9B58D')}, ${gradient('z02.0001', 'end', '#F9ECD2')})`,
-                  }"
-                >
+            <div class="payment-bg" :style="{ backgroundImage: `url(${paymentBgUrl()})` }">
+              <section
+                class="pay-card"
+                :style="{
+                  '--pay-strip-gradient': `linear-gradient(90deg, ${gradient('z02.0001', 'start', '#D9B58D')}, ${gradient('z02.0001', 'end', '#F9ECD2')})`,
+                }"
+              >
+                <header>
                   <span class="member-label">Diamond Member</span>
-                  <span
-                    class="logo-cradle"
-                    :style="{
-                      backgroundImage: `linear-gradient(90deg, ${gradient('z02.0001', 'start', '#D9B58D')}, ${gradient('z02.0001', 'end', '#F9ECD2')})`,
-                    }"
-                  ></span>
                   <img class="logo" :src="skinImageFor('z02.0002')" alt="" />
                   <img class="mask" :src="skinImageFor('z02.0003')" alt="" />
                 </header>

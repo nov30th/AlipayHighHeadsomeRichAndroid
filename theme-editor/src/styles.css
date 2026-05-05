@@ -291,6 +291,7 @@ button:disabled {
   border: 1px solid #e2e8ee;
   border-radius: 6px;
   background: #f8fafc;
+  cursor: pointer;
 }
 
 .file-button {
@@ -397,6 +398,49 @@ button:disabled {
   object-fit: contain;
 }
 
+.tabbar .tab-item {
+  cursor: pointer;
+}
+
+.tab-icon {
+  position: relative;
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+}
+
+.tab-icon img {
+  position: absolute;
+  inset: 0;
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+  transition: opacity 0.12s;
+}
+
+.tab-icon .icon-selected {
+  opacity: 0;
+}
+
+.tabbar .tab-item:hover .icon-selected,
+.tabbar .tab-item.active .icon-selected {
+  opacity: 1;
+}
+
+.tabbar .tab-item:hover .icon-normal,
+.tabbar .tab-item.active .icon-normal {
+  opacity: 0;
+}
+
+.tab-label {
+  color: var(--tab-color-normal, inherit);
+}
+
+.tabbar .tab-item:hover .tab-label,
+.tabbar .tab-item.active .tab-label {
+  color: var(--tab-color-selected, inherit);
+}
+
 .payment-bg {
   display: grid;
   place-items: start center;
@@ -408,11 +452,35 @@ button:disabled {
 }
 
 .pay-card {
+  /* Adjustable bulge geometry. Tune these freely. */
+  --strip-height: 24px;   /* height of the flat header gradient strip */
+  --bulge-rx: 36px;       /* horizontal radius of the oblate bulge */
+  --bulge-ry: 6px;       /* vertical radius of the oblate bulge (smaller = flatter) */
+
   position: relative;
   width: 82%;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 16px 42px rgba(23, 32, 42, 0.24);
+}
+
+.pay-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--strip-height) + var(--bulge-ry));
+  background-image: var(--pay-strip-gradient, linear-gradient(90deg, #D9B58D, #F9ECD2));
+  border-radius: 16px 16px 0 0;
+  -webkit-mask:
+    linear-gradient(#000, #000) 0 0 / 100% var(--strip-height) no-repeat,
+    radial-gradient(var(--bulge-rx) var(--bulge-ry) at 50% var(--strip-height), #000 99%, transparent 100%) 0 0 / 100% 100% no-repeat;
+  mask:
+    linear-gradient(#000, #000) 0 0 / 100% var(--strip-height) no-repeat,
+    radial-gradient(var(--bulge-rx) var(--bulge-ry) at 50% var(--strip-height), #000 99%, transparent 100%) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .pay-card header {
@@ -422,7 +490,7 @@ button:disabled {
   justify-content: space-between;
   height: 24px;
   padding: 0 16px;
-  border-radius: 16px 16px 0 0;
+  z-index: 1;
 }
 
 .member-label {
@@ -431,21 +499,6 @@ button:disabled {
   color: #FFFFFF;
   letter-spacing: 0.2px;
   z-index: 2;
-}
-
-.logo-cradle {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translateX(-50%);
-  width: 112px;
-  height: 30px;
-  border-radius: 50%;
-  pointer-events: none;
-  background-size: 450% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: 1;
 }
 
 .logo {
