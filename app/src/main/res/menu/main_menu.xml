@@ -17,10 +17,6 @@
     </group>
     <group android:id="@+id/group_about">
         <item
-            android:id="@+id/action_editor"
-            android:title="启动网页编辑器"
-            app:showAsAction="never" />
-        <item
             android:id="@+id/action_github"
             android:title="项目主页 (GitHub)"
             app:showAsAction="never" />

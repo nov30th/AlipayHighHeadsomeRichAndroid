@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
@@ -32,6 +33,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.text.HtmlCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -52,16 +54,14 @@ import com.google.android.material.tabs.TabLayout;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.net.Inet4Address;
-import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import im.hoho.alipayInstallB.editor.EditorHttpServer;
+import im.hoho.alipayInstallB.editor.EditorAddress;
+import im.hoho.alipayInstallB.editor.EditorService;
 import im.hoho.alipayInstallB.skin.RemoteManifest;
 import im.hoho.alipayInstallB.skin.SkinEntry;
 import im.hoho.alipayInstallB.skin.SkinLibrary;
@@ -72,6 +72,7 @@ import im.hoho.alipayInstallB.skin.SkinPaths;
 public class MainActivity extends Activity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1100;
     private static final int REQUEST_PICK_ZIP = 2;
 
     private static final String PREFS_NAME = "AppPreferences";
@@ -91,16 +92,27 @@ public class MainActivity extends Activity {
     private AutoCompleteTextView spinnerMemberGrade;
     private View skinPanel;
     private View themePanel;
+    private View editorPanel;
     private MaterialButton btnExportThemes;
+    private MaterialButton btnEditorStartStop;
+    private MaterialButton btnEditorOpen;
+    private MaterialButton btnEditorCopyLan;
+    private MaterialButton btnEditorBatterySettings;
+    private MaterialButton btnEditorNotificationSettings;
     private Chip chipThemeExportStatus;
+    private Chip chipEditorStatus;
     private TextView tvThemeExportPath;
+    private TextView tvEditorLocalUrl;
+    private TextView tvEditorLanUrl;
+    private TextView tvEditorBatteryStatus;
+    private TextView tvEditorNotificationStatus;
     private LinearLayout themeListContainer;
     private final List<ThemeModel> themeList = new ArrayList<>();
     private int currentTab = 0;
     
     private ExecutorService executorService;
     private Handler mainHandler;
-    private EditorHttpServer editorServer;
+    private boolean pendingStartWebEditorAfterNotificationPermission;
 
     private static final class BusyDialog {
         final AlertDialog dialog;
@@ -192,11 +204,13 @@ public class MainActivity extends Activity {
         String displayName;
         String bgPath;
         boolean isPending;
+        boolean hasLtpSkin;
 
         ThemeModel(File dir, String selectedTheme, boolean updatePending) {
             this.dirName = dir.getName();
             this.displayName = dir.getName();
             this.isPending = updatePending && dirName.equals(selectedTheme);
+            this.hasLtpSkin = new File(new File(dir, "ltp"), "meta.json").isFile();
             parseMeta(dir);
         }
 
@@ -372,6 +386,9 @@ public class MainActivity extends Activity {
         mainHandler = new Handler(Looper.getMainLooper());
 
         cleanupTempFiles();
+        if (savedInstanceState == null) {
+            EditorService.stop(this);
+        }
 
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         if (settings.getBoolean(KEY_FIRST_RUN, true)) {
@@ -393,9 +410,6 @@ public class MainActivity extends Activity {
                 return true;
             } else if (id == R.id.action_export_builtin) {
                 doRequestBuiltinExport();
-                return true;
-            } else if (id == R.id.action_editor) {
-                openWebEditor();
                 return true;
             } else if (id == R.id.action_github) {
                 openProjectHomepage();
@@ -421,13 +435,25 @@ public class MainActivity extends Activity {
         fabAdd = findViewById(R.id.fabAdd);
         skinPanel = findViewById(R.id.skinPanel);
         themePanel = findViewById(R.id.themePanel);
+        editorPanel = findViewById(R.id.editorPanel);
         btnExportThemes = findViewById(R.id.btnExportThemes);
+        btnEditorStartStop = findViewById(R.id.btnEditorStartStop);
+        btnEditorOpen = findViewById(R.id.btnEditorOpen);
+        btnEditorCopyLan = findViewById(R.id.btnEditorCopyLan);
+        btnEditorBatterySettings = findViewById(R.id.btnEditorBatterySettings);
+        btnEditorNotificationSettings = findViewById(R.id.btnEditorNotificationSettings);
         chipThemeExportStatus = findViewById(R.id.chipThemeExportStatus);
+        chipEditorStatus = findViewById(R.id.chipEditorStatus);
         tvThemeExportPath = findViewById(R.id.tvThemeExportPath);
+        tvEditorLocalUrl = findViewById(R.id.tvEditorLocalUrl);
+        tvEditorLanUrl = findViewById(R.id.tvEditorLanUrl);
+        tvEditorBatteryStatus = findViewById(R.id.tvEditorBatteryStatus);
+        tvEditorNotificationStatus = findViewById(R.id.tvEditorNotificationStatus);
         themeListContainer = findViewById(R.id.themeListContainer);
 
         setupButtons();
         setupThemePanel();
+        setupEditorPanel();
         showTab(0);
 
         if (!checkStoragePermission()) {
@@ -509,6 +535,7 @@ public class MainActivity extends Activity {
     private void setupTabs() {
         tabLayout.addTab(tabLayout.newTab().setText("付款皮肤"));
         tabLayout.addTab(tabLayout.newTab().setText("主题"));
+        tabLayout.addTab(tabLayout.newTab().setText("皮肤修改器"));
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -528,11 +555,16 @@ public class MainActivity extends Activity {
     private void showTab(int tab) {
         currentTab = tab;
         boolean theme = tab == 1;
-        skinPanel.setVisibility(theme ? View.GONE : View.VISIBLE);
+        boolean editor = tab == 2;
+        skinPanel.setVisibility(!theme && !editor ? View.VISIBLE : View.GONE);
         themePanel.setVisibility(theme ? View.VISIBLE : View.GONE);
-        fabAdd.setVisibility(View.VISIBLE);
+        editorPanel.setVisibility(editor ? View.VISIBLE : View.GONE);
+        fabAdd.setVisibility(editor ? View.GONE : View.VISIBLE);
         fabAdd.setText(theme ? "在线主题" : "添加皮肤");
-        if (theme) {
+        if (editor) {
+            tvEmpty.setVisibility(View.GONE);
+            refreshEditorPanel();
+        } else if (theme) {
             tvEmpty.setVisibility(View.GONE);
             refreshThemeExportStatus();
         } else {
@@ -544,6 +576,47 @@ public class MainActivity extends Activity {
         tvThemeExportPath.setText("导出目录: " + SkinPaths.themesDir().getAbsolutePath());
         btnExportThemes.setOnClickListener(v -> confirmExportThemes());
         refreshThemeExportStatus();
+    }
+
+    private void setupEditorPanel() {
+        btnEditorStartStop.setOnClickListener(v -> {
+            if (EditorService.isRunning()) {
+                stopWebEditor();
+            } else {
+                openWebEditor();
+            }
+        });
+        btnEditorOpen.setOnClickListener(v -> openUrl(editorLocalUrl()));
+        btnEditorCopyLan.setOnClickListener(v -> copyEditorLanUrl());
+        btnEditorBatterySettings.setOnClickListener(v -> openBatteryOptimizationSettings());
+        btnEditorNotificationSettings.setOnClickListener(v -> openNotificationSettings());
+        refreshEditorPanel();
+    }
+
+    private void refreshEditorPanel() {
+        if (chipEditorStatus == null) return;
+        boolean running = EditorService.isRunning();
+        boolean batteryRestricted = isBatteryRestricted();
+        boolean notificationsEnabled = areEditorNotificationsEnabled();
+        String localUrl = editorLocalUrl();
+        String lanUrl = editorLanUrl();
+        chipEditorStatus.setText(running ? "运行中" : "已停止");
+        tvEditorLocalUrl.setText("手机浏览器: " + localUrl);
+        tvEditorLanUrl.setText("局域网电脑: " + lanUrl);
+        tvEditorBatteryStatus.setText(batteryRestricted
+                ? "电池限制: 建议在系统设置中把本应用设为无限制，否则切换应用后可能关闭网页服务器。"
+                : "电池限制: 已是无限制。");
+        btnEditorBatterySettings.setVisibility(batteryRestricted ? View.VISIBLE : View.GONE);
+        tvEditorNotificationStatus.setText(notificationsEnabled
+                ? "通知权限: 已允许。"
+                : "通知权限: 未允许，前台服务通知可能无法显示。");
+        btnEditorNotificationSettings.setVisibility(notificationsEnabled ? View.GONE : View.VISIBLE);
+        btnEditorStartStop.setText(running ? "停止" : "启动");
+        btnEditorStartStop.setIconResource(running
+                ? android.R.drawable.ic_media_pause
+                : android.R.drawable.ic_media_play);
+        btnEditorOpen.setEnabled(running);
+        btnEditorCopyLan.setEnabled(running);
     }
 
     private void confirmExportThemes() {
@@ -672,15 +745,6 @@ public class MainActivity extends Activity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setPadding(dp(16), dp(12), dp(16), dp(12));
 
-        TextView name = new TextView(this);
-        name.setText(theme.displayName);
-        name.setTextColor(Color.parseColor("#222222"));
-        name.setTextSize(16);
-        name.setSingleLine(true);
-        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        row.addView(name, new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-
         Chip status = new Chip(this);
         status.setCheckable(false);
         status.setText(theme.isPending ? "准备替换" : "替换");
@@ -689,34 +753,26 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
-        actionLp.leftMargin = dp(6);
+        actionLp.rightMargin = dp(6);
         row.addView(status, actionLp);
 
-        MaterialButton zip = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        zip.setText("Zip");
-        zip.setMinWidth(0);
-        zip.setMinimumWidth(0);
-        zip.setPadding(dp(10), 0, dp(10), 0);
-        zip.setOnClickListener(v -> exportTheme(theme));
-        LinearLayout.LayoutParams zipLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        zipLp.leftMargin = dp(6);
-        row.addView(zip, zipLp);
+        ImageButton more = new ImageButton(this);
+        more.setImageResource(android.R.drawable.ic_menu_more);
+        more.setBackgroundColor(Color.TRANSPARENT);
+        more.setContentDescription("更多操作");
+        more.setOnClickListener(v -> showThemeMoreMenu(more, theme));
+        LinearLayout.LayoutParams moreLp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        moreLp.rightMargin = dp(12);
+        row.addView(more, moreLp);
 
-        MaterialButton delete = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        delete.setText("删除");
-        delete.setMinWidth(0);
-        delete.setMinimumWidth(0);
-        delete.setPadding(dp(10), 0, dp(10), 0);
-        delete.setTextColor(Color.parseColor("#D93025"));
-        delete.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#D93025")));
-        delete.setOnClickListener(v -> confirmDeleteTheme(theme));
-        LinearLayout.LayoutParams deleteLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        deleteLp.leftMargin = dp(6);
-        row.addView(delete, deleteLp);
+        TextView name = new TextView(this);
+        name.setText(theme.displayName);
+        name.setTextColor(Color.parseColor("#222222"));
+        name.setTextSize(16);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        row.addView(name, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1));
 
         box.addView(row);
         card.addView(box);
@@ -727,6 +783,30 @@ public class MainActivity extends Activity {
         lp.bottomMargin = dp(12);
         card.setLayoutParams(lp);
         return card;
+    }
+
+    private void showThemeMoreMenu(View anchor, ThemeModel theme) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenu().add(0, 1, 0, "导出为 Zip");
+        if (theme.hasLtpSkin) {
+            popup.getMenu().add(0, 2, 1, "提取付款皮肤");
+        }
+        popup.getMenu().add(0, 3, 2, "删除主题");
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == 1) {
+                exportTheme(theme);
+                return true;
+            } else if (id == 2) {
+                extractThemeLtpSkin(theme);
+                return true;
+            } else if (id == 3) {
+                confirmDeleteTheme(theme);
+                return true;
+            }
+            return false;
+        });
+        popup.show();
     }
 
     private void selectTheme(ThemeModel theme) {
@@ -742,6 +822,20 @@ public class MainActivity extends Activity {
                 mainHandler.post(() -> Toast.makeText(this,
                         "准备替换失败: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
+        });
+    }
+
+    private void extractThemeLtpSkin(ThemeModel theme) {
+        executorService.execute(() -> {
+            SkinLibrary.ImportResult r = SkinLibrary.extractThemeLtpSkin(theme.dirName);
+            mainHandler.post(() -> {
+                if (r.success) {
+                    Toast.makeText(this, "已提取付款皮肤: " + r.dirName, Toast.LENGTH_LONG).show();
+                    loadSkins();
+                } else {
+                    Toast.makeText(this, "提取失败: " + r.message, Toast.LENGTH_LONG).show();
+                }
+            });
         });
     }
 
@@ -796,7 +890,7 @@ public class MainActivity extends Activity {
                 .setMessage("将在下次进入支付宝付款码时清空已下发的皮肤缓存（不影响皮肤库）。继续？")
                 .setPositiveButton("确定", (d, w) -> {
                     SkinLibrary.requestCacheDelete();
-                    Toast.makeText(this, "已计划清空缓存，重启支付宝付款码生效", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "已计划清空缓存，重新进入支付宝付款码生效", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("取消", null).show();
     }
@@ -826,37 +920,122 @@ public class MainActivity extends Activity {
             requestStoragePermission();
             return;
         }
-        try {
-            if (editorServer == null || !editorServer.isAlive()) {
-                editorServer = new EditorHttpServer(this);
-                editorServer.start();
+        boolean needsNotificationPermission = needsNotificationPermission();
+        boolean batteryRestricted = isBatteryRestricted();
+        if (needsNotificationPermission || batteryRestricted) {
+            showWebEditorReadinessDialog(needsNotificationPermission, batteryRestricted);
+            return;
+        }
+        startWebEditor();
+    }
+
+    private void showWebEditorReadinessDialog(boolean needsNotificationPermission, boolean batteryRestricted) {
+        String batteryStatus = batteryRestricted
+                ? "当前系统仍在限制本应用后台运行。请把本应用的电池限制设置为 <b>无限制</b>。"
+                : "当前电池限制状态：<b>已是无限制</b>。";
+        CharSequence message = HtmlCompat.fromHtml(
+                "<b>皮肤修改器需要在后台保持网页服务器运行</b><br/><br/>" +
+                "请允许通知权限，这样应用可以通过前台服务显示运行状态，并尽量避免网页服务器被系统关闭。<br/><br/>" +
+                batteryStatus + "<br/><br/>" +
+                "如果没有允许通知，或没有把电池限制设置为无限制，切换到其他应用后 Android 系统可能会关闭网页服务器。",
+                HtmlCompat.FROM_HTML_MODE_LEGACY);
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                .setTitle("皮肤修改器后台运行提醒")
+                .setMessage(message)
+                .setPositiveButton(needsNotificationPermission ? "继续授权" : "继续启动", (d, w) -> {
+                    if (needsNotificationPermission) {
+                        pendingStartWebEditorAfterNotificationPermission = true;
+                        requestNotificationPermissionIfNeeded();
+                    } else {
+                        startWebEditor();
+                    }
+                })
+                .setNegativeButton("取消", null);
+        if (batteryRestricted) {
+            builder.setNeutralButton("电池设置", (d, w) -> openBatteryOptimizationSettings());
+        }
+
+        AlertDialog dialog = builder.show();
+        TextView messageView = dialog.findViewById(android.R.id.message);
+        if (messageView != null) {
+            messageView.setLineSpacing(dp(2), 1.1f);
+        }
+    }
+
+    private boolean needsNotificationPermission() {
+        return !areEditorNotificationsEnabled();
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE);
             }
-            String localUrl = "http://127.0.0.1:" + EditorHttpServer.PORT + "/";
-            String lanIp = findLanIp();
-            String lanUrl = lanIp == null ? localUrl : "http://" + lanIp + ":" + EditorHttpServer.PORT + "/";
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("网页编辑器已启动")
-                    .setMessage("手机浏览器:\n" + localUrl + "\n\n局域网电脑:\n" + lanUrl + "\n\n编辑器会直接读取并覆盖本地 skins/ 与 themes/ 文件。")
-                    .setPositiveButton("打开", (d, w) -> openUrl(localUrl))
-                    .setNegativeButton("复制局域网地址", (d, w) -> {
-                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                        if (cm != null) {
-                            cm.setPrimaryClip(ClipData.newPlainText("HOHO editor URL", lanUrl));
-                            Toast.makeText(this, "已复制: " + lanUrl, Toast.LENGTH_SHORT).show();
-                        }
-                    })
-                    .setNeutralButton("停止服务", (d, w) -> stopWebEditor())
-                    .show();
+        }
+    }
+
+    private boolean areEditorNotificationsEnabled() {
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return false;
+        return Build.VERSION.SDK_INT < 33
+                || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isBatteryRestricted() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false;
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        return pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName());
+    }
+
+    private void openBatteryOptimizationSettings() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
         } catch (Exception e) {
-            Toast.makeText(this, "启动网页编辑器失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "无法打开电池设置: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openNotificationSettings() {
+        try {
+            Intent intent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+            } else {
+                intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:" + getPackageName()));
+            }
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "无法打开通知设置: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void startWebEditor() {
+        try {
+            EditorService.start(this);
+            refreshEditorPanel();
+            Toast.makeText(this, "皮肤修改器已启动", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "启动皮肤修改器失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
     private void stopWebEditor() {
-        if (editorServer != null) {
-            editorServer.stop();
-            editorServer = null;
-        }
+        EditorService.stop(this);
+        refreshEditorPanel();
+        Toast.makeText(this, "皮肤修改器已停止", Toast.LENGTH_SHORT).show();
     }
 
     private void cleanupTempFiles() {
@@ -891,23 +1070,21 @@ public class MainActivity extends Activity {
         }
     }
 
-    private String findLanIp() {
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface ni = interfaces.nextElement();
-                if (!ni.isUp() || ni.isLoopback()) continue;
-                Enumeration<java.net.InetAddress> addresses = ni.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    java.net.InetAddress address = addresses.nextElement();
-                    if (address instanceof Inet4Address && !address.isLoopbackAddress()) {
-                        return address.getHostAddress();
-                    }
-                }
-            }
-        } catch (Exception ignored) {
+    private String editorLocalUrl() {
+        return EditorAddress.localUrl();
+    }
+
+    private String editorLanUrl() {
+        return EditorAddress.displayUrl();
+    }
+
+    private void copyEditorLanUrl() {
+        String lanUrl = editorLanUrl();
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(ClipData.newPlainText("HOHO editor URL", lanUrl));
+            Toast.makeText(this, "已复制: " + lanUrl, Toast.LENGTH_SHORT).show();
         }
-        return null;
     }
 
     private void refreshActivateButton() {
@@ -1023,6 +1200,10 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE && checkStoragePermission()) {
             initAfterPermission();
+        } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE
+                && pendingStartWebEditorAfterNotificationPermission) {
+            pendingStartWebEditorAfterNotificationPermission = false;
+            startWebEditor();
         }
     }
 
@@ -1047,7 +1228,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        stopWebEditor();
         if (executorService != null) executorService.shutdownNow();
         super.onDestroy();
     }
@@ -1434,6 +1614,7 @@ public class MainActivity extends Activity {
             loadThemes();
             refreshActivateButton();
             refreshThemeExportStatus();
+            refreshEditorPanel();
         }
     }
 }

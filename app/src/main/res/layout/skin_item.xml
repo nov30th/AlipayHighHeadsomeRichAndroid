@@ -78,6 +78,22 @@
             android:orientation="horizontal"
             android:padding="16dp">
 
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/cbSelected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp" />
+
+            <ImageButton
+                android:id="@+id/btnMore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_more"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -102,21 +118,6 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     tools:text="目录: Ali" />
             </LinearLayout>
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/cbSelected"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp" />
-
-            <ImageButton
-                android:id="@+id/btnMore"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="8dp"
-                android:src="@android:drawable/ic_menu_more"
-                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
