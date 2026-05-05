@@ -68,8 +68,20 @@ fastlane/readme.md
 app/release/**
 app/debug/**
 
-# 远程皮肤资源：必须随仓库一起发布，App 通过 raw.githubusercontent 拉取
-!remote_skins/
-!remote_skins/**
-!remote_skins/*.zip
-!remote_skins/manifest.json
+# Local web theme editor
+theme-editor/node_modules/
+theme-editor/dist/
+theme-editor/tmp_uploads/
+theme-editor/public/
+theme-editor/dev.log
+
+# Embedded web editor bundle is regenerated from theme-editor/ by Gradle
+app/src/main/assets/editor/
+
+# Stray multer uploads at repo root (theme-editor dev server)
+/tmp_uploads/
+
+# 远程皮肤资源：仓库只保存根目录的 zip 包和 manifest.json，
+# 解压后的子目录由 App 在运行时自行展开，不入库。
+remote_skins/*/
+remote_themes/*/

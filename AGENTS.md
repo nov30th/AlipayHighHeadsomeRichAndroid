@@ -8,7 +8,7 @@
 
 ## Build Info
 
-- JDK: 17 (Temurin) — see `.github/workflows/android.yml`
+- JDK: 17 (Temurin) — see `.github/workflows/android.yml` path: $HOME\.jdks\ms-17.0.19
 - Android `compileSdkVersion`: 33
 - Android `minSdkVersion`: 23
 - Android `targetSdkVersion`: 33

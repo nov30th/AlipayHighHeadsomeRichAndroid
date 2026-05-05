@@ -196,6 +196,37 @@ public final class SkinLibrary {
         return ok;
     }
 
+    public static ImportResult extractThemeLtpSkin(String themeDirName) {
+        if (themeDirName == null || SkinPaths.isReservedName(themeDirName)) {
+            return ImportResult.fail("非法主题名");
+        }
+        File themeDir = new File(SkinPaths.themesDir(), themeDirName);
+        if (!themeDir.exists() || !themeDir.isDirectory()) {
+            return ImportResult.fail("主题不存在: " + themeDirName);
+        }
+        File ltpDir = new File(themeDir, "ltp");
+        if (!ltpDir.exists() || !ltpDir.isDirectory() || !new File(ltpDir, "meta.json").isFile()) {
+            return ImportResult.fail("该主题不包含可提取的付款皮肤");
+        }
+        if (!SkinMeta.isValid(ltpDir)) {
+            return ImportResult.fail("ltp/meta.json 校验失败");
+        }
+        File skinsDir = SkinPaths.skinsDir();
+        if (!skinsDir.exists() && !skinsDir.mkdirs()) {
+            return ImportResult.fail("无法创建 skins 目录");
+        }
+        File target = new File(skinsDir, themeDirName);
+        if (target.exists() && !SkinIO.deleteRecursive(target)) {
+            return ImportResult.fail("无法覆盖旧付款皮肤: " + themeDirName);
+        }
+        try {
+            SkinIO.copyDir(ltpDir, target);
+        } catch (IOException e) {
+            return ImportResult.fail("复制失败: " + e.getMessage());
+        }
+        return ImportResult.ok(themeDirName);
+    }
+
     public static boolean isActived() {
         return SkinPaths.activedFlag().exists();
     }

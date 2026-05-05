@@ -4,9 +4,12 @@
 
 主题卡片现在支持一键 **替换**、导出为 **Zip**、以及删除本地主题。替换是一次性请求：点击替换后显示“准备替换”，重新打开支付宝后模块会替换当前已启用主题的缓存文件，并自动清除请求标记。
 
+新增 **HoHo皮肤修改器**，可在浏览器中直接修改本地付款皮肤和主题资源，并支持从主题中提取内含的付款皮肤。
+
 注意：主题替换前，支付宝内必须已经启用过一个主题，否则模块无法定位当前主题缓存目录。
 
 <a href="images/Screenshot_theme.jpg"><img src="images/Screenshot_theme.jpg" height="600" alt="主题功能界面" /></a>
+<a href="images/screenshot_theme_editor.jpg"><img src="images/screenshot_theme_editor.jpg" height="600" alt="HoHo皮肤修改器界面" /></a>
 
 ## 2024.10界面更新
 使用Claude生成了界面，着实方便。

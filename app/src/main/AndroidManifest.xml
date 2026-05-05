@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 对于 Android 13 (API 级别 33) 及以上版本，发布通知需要此权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 前台服务（保持网页编辑器在切到支付宝后仍然可访问） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- 对于 Android 11 (API 级别 30) 及以上版本，需要添加以下权限 -->
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
@@ -42,6 +46,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name="im.hoho.alipayInstallB.editor.EditorService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>
