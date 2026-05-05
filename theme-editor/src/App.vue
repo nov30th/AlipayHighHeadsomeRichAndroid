@@ -8,7 +8,7 @@ const libraryMode = ref(false);
 const libraryItems = ref({ skins: [], themes: [] });
 const activeView = ref('home');
 const mode = ref('theme');
-const status = ref('Loading editor...');
+const status = ref('正在加载皮肤修改器...');
 const saving = ref(false);
 const cacheBust = ref(Date.now());
 const debug = ref({ open: false, raw: '', summary: '' });
@@ -24,17 +24,19 @@ const cropState = ref({
 });
 
 const tabs = [
-  ['home', 'Home'],
-  ['me', 'Me'],
-  ['pay', 'Pay'],
+  ['home', '首页'],
+  ['me', '我的'],
+  ['pay', '付款码'],
 ];
 
 const hasTheme = computed(() => Boolean(data.value?.theme?.available));
 const hasSkin = computed(() => Boolean(data.value?.skin?.available));
-const visibleTabs = computed(() => (hasTheme.value ? tabs : [['pay', 'Pay']]));
+const editingTheme = computed(() => libraryMode.value && data.value?.kind === 'themes');
+const editingSkin = computed(() => libraryMode.value && data.value?.kind === 'skins');
+const visibleTabs = computed(() => (hasTheme.value ? tabs : [['pay', '付款码']]));
 const visibleModes = computed(() => [
-  ...(hasTheme.value ? [['theme', 'Theme']] : []),
-  ...(hasSkin.value ? [['skin', 'Payment']] : []),
+  ...(hasTheme.value ? [['theme', '主题']] : []),
+  ...(hasSkin.value ? [['skin', '付款皮肤']] : []),
 ]);
 
 function clone(value) {
@@ -94,10 +96,10 @@ function resourceImage(resource) {
 }
 
 const homeActions = computed(() => [
-  ['home_scan_icon', 'Scan'],
-  ['home_pay_collect_icon', 'Pay/Collect'],
-  ['home_transport_icon', 'Travel'],
-  ['home_pocket_icon', 'Cards'],
+  ['home_scan_icon', '扫一扫'],
+  ['home_pay_collect_icon', '收付款'],
+  ['home_transport_icon', '出行'],
+  ['home_pocket_icon', '卡包'],
 ]);
 
 const tabBarBgImage = computed(() => {
@@ -112,11 +114,11 @@ const tabBarBgImage = computed(() => {
 });
 
 const tabItems = computed(() => [
-  { base: 'tab_bar_home_icon', label: 'Home' },
-  { base: 'tab_bar_wealth_icon', label: 'Wealth' },
-  { base: 'tab_bar_life_icon', label: 'Life' },
-  { base: 'tab_bar_msg_icon', label: 'Messages' },
-  { base: 'tab_bar_mime_icon', label: 'Me' },
+  { base: 'tab_bar_home_icon', label: '首页' },
+  { base: 'tab_bar_wealth_icon', label: '理财' },
+  { base: 'tab_bar_life_icon', label: '生活' },
+  { base: 'tab_bar_msg_icon', label: '消息' },
+  { base: 'tab_bar_mime_icon', label: '我的' },
 ]);
 
 const editableResources = computed(() => {
@@ -157,14 +159,14 @@ async function loadTheme(id) {
   const rawText = await response.text();
   if (!response.ok) {
     debug.value = { open: false, raw: rawText, summary: `HTTP ${response.status} from ${url}` };
-    throw new Error('Unable to load theme metadata');
+    throw new Error('无法加载主题配置');
   }
   const loaded = JSON.parse(rawText);
   data.value = clone(loaded);
   sessionId.value = loaded.sessionId;
   cacheBust.value = Date.now();
   chooseInitialMode(loaded);
-  status.value = 'Loaded uploaded ZIP into a temporary editing session.';
+  status.value = '已载入 ZIP，可临时编辑。';
   recordDebug(url, rawText, loaded);
 }
 
@@ -185,11 +187,11 @@ async function uploadZip(event) {
     if (!file) return;
     const body = new FormData();
     body.append('file', file);
-    status.value = 'Uploading and extracting ZIP...';
+    status.value = '正在上传并解压 ZIP...';
     const response = await fetch('/api/sessions', { method: 'POST', body });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'ZIP upload failed');
+      throw new Error(error.error || 'ZIP 上传失败');
     }
     const session = await response.json();
     await loadTheme(session.id);
@@ -201,15 +203,15 @@ async function uploadZip(event) {
 async function loadLibrary() {
   try {
     const response = await fetch('/api/library');
-    if (!response.ok) throw new Error('Library API unavailable');
+    if (!response.ok) throw new Error('本地皮肤库接口不可用');
     libraryMode.value = true;
     libraryItems.value = await response.json();
     data.value = null;
     sessionId.value = '';
-    status.value = 'Select a local skin or theme to edit.';
+    status.value = '请选择本地付款皮肤或主题进行编辑。';
   } catch (_error) {
     libraryMode.value = false;
-    status.value = 'Upload a theme ZIP to start editing.';
+    status.value = '请上传主题 ZIP 开始编辑。';
   }
 }
 
@@ -222,14 +224,14 @@ async function selectLibraryItem(kind, item) {
       let parsed = {};
       try { parsed = JSON.parse(rawText); } catch (_) { /* keep as text */ }
       debug.value = { open: false, raw: rawText, summary: `HTTP ${response.status} from ${url}` };
-      throw new Error(parsed.error || `Load failed (HTTP ${response.status})`);
+      throw new Error(parsed.error || `加载失败 (HTTP ${response.status})`);
     }
     const loaded = JSON.parse(rawText);
     data.value = clone(loaded);
     sessionId.value = '';
     cacheBust.value = Date.now();
     chooseInitialMode(loaded);
-    status.value = `Editing ${item.displayName || item.dirName} directly.`;
+    status.value = `正在直接编辑 ${item.displayName || item.dirName}。`;
     recordDebug(url, rawText, loaded);
   } catch (error) {
     status.value = error.message;
@@ -272,7 +274,7 @@ function chooseInitialMode(loaded) {
 async function saveTheme() {
   try {
     saving.value = true;
-    status.value = 'Saving edits to the temporary session...';
+    status.value = '正在保存修改...';
     const response = await fetch(themeUrl(), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -283,9 +285,9 @@ async function saveTheme() {
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || 'Save failed');
+      throw new Error(body.error || '保存失败');
     }
-    status.value = libraryMode.value ? 'Saved directly to local files.' : 'Saved. Download the ZIP when you are ready.';
+    status.value = libraryMode.value ? '已保存到本地文件。' : '已保存，可下载 ZIP。';
   } catch (error) {
     status.value = error.message;
   } finally {
@@ -302,14 +304,14 @@ async function uploadAsset(area, resource, event) {
     const body = new FormData();
     body.append('name', assetName);
     body.append('file', file);
-    status.value = `Replacing ${assetName}...`;
+    status.value = `正在替换 ${assetName}...`;
     const response = await fetch(assetUploadUrl(area), { method: 'POST', body });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Upload failed');
+      throw new Error(error.error || '上传失败');
     }
     cacheBust.value = Date.now();
-    status.value = `Replaced ${assetName}.`;
+    status.value = `已替换 ${assetName}。`;
   } catch (error) {
     status.value = error.message;
   }
@@ -376,7 +378,7 @@ async function canvasToBlob(canvas) {
 async function saveCrop() {
   try {
     if (!canSaveCrop.value || !cropImage.value) {
-      status.value = 'Select a crop rectangle first.';
+    status.value = '请先选择裁剪区域。';
       return;
     }
 
@@ -397,15 +399,15 @@ async function saveCrop() {
     const body = new FormData();
     body.append('name', cropState.value.assetName);
     body.append('file', await canvasToBlob(canvas), cropState.value.assetName);
-    status.value = `Saving cropped ${cropState.value.assetName}...`;
+    status.value = `正在保存裁剪后的 ${cropState.value.assetName}...`;
     const response = await fetch(assetUploadUrl(cropState.value.area), { method: 'POST', body });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || 'Crop save failed');
+      throw new Error(error.error || '裁剪保存失败');
     }
     cacheBust.value = Date.now();
     closeCrop();
-    status.value = 'Cropped image saved and overwritten.';
+    status.value = '已保存并覆盖裁剪后的图片。';
   } catch (error) {
     status.value = error.message;
   }
@@ -415,7 +417,7 @@ async function downloadZip() {
   if (libraryMode.value || !sessionId.value) return;
   try {
     saving.value = true;
-    status.value = 'Saving edits before download...';
+    status.value = '下载前正在保存修改...';
     const response = await fetch(themeUrl(), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -426,9 +428,9 @@ async function downloadZip() {
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || 'Save failed');
+      throw new Error(body.error || '保存失败');
     }
-    status.value = 'Downloading ZIP...';
+    status.value = '正在下载 ZIP...';
     window.location.href = `/api/sessions/${sessionId.value}/download`;
   } catch (error) {
     status.value = error.message;
@@ -441,7 +443,7 @@ async function activateAndApply() {
   if (!libraryMode.value || !data.value) return;
   try {
     saving.value = true;
-    status.value = 'Activating and applying theme...';
+    status.value = editingTheme.value ? '正在启用并应用主题...' : '正在保存并更新付款皮肤...';
     const url = `/api/library/${encodeURIComponent(data.value.kind)}/${encodeURIComponent(data.value.dirName)}/activate`;
     const response = await fetch(url, {
       method: 'POST',
@@ -453,11 +455,15 @@ async function activateAndApply() {
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || 'Activate failed');
+      throw new Error(body.error || (editingTheme.value ? '启用失败' : '更新失败'));
     }
-    status.value = 'Activated. Please reopen Alipay so the new theme is copied in.';
-    if (typeof window !== 'undefined') {
-      window.alert('Theme activated and applied.\n\nPlease fully close and reopen Alipay so the new theme is copied in.');
+    if (editingTheme.value) {
+      status.value = '已启用。请完全关闭并重新打开支付宝，让新主题复制生效。';
+    } else {
+      status.value = '已保存并创建付款皮肤更新请求，请重新打开支付宝付款码生效。';
+    }
+    if (editingTheme.value && typeof window !== 'undefined') {
+      window.alert('主题已启用并应用。\n\n请完全关闭并重新打开支付宝，让新主题复制生效。');
     }
   } catch (error) {
     status.value = error.message;
@@ -470,9 +476,9 @@ async function copyDebug() {
   const text = (debug.value.summary || '') + '\n\n--- RAW ---\n' + (debug.value.raw || '');
   try {
     await navigator.clipboard.writeText(text);
-    status.value = 'Debug info copied to clipboard.';
+    status.value = '调试信息已复制。';
   } catch (_error) {
-    status.value = 'Copy failed - select the text manually.';
+    status.value = '复制失败，请手动选择文本。';
   }
 }
 
@@ -497,7 +503,7 @@ async function downloadAsset(area, resource) {
   try {
     const url = imageUrl(area, assetName);
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`Download failed (HTTP ${response.status})`);
+    if (!response.ok) throw new Error(`下载失败 (HTTP ${response.status})`);
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const baseName = String(assetName).split('/').pop() || assetName;
@@ -508,7 +514,7 @@ async function downloadAsset(area, resource) {
     anchor.click();
     document.body.removeChild(anchor);
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    status.value = `Downloaded ${baseName}.`;
+    status.value = `已下载 ${baseName}。`;
   } catch (error) {
     status.value = error.message;
   }
@@ -519,7 +525,7 @@ function cancelEdit() {
   sessionId.value = '';
   activeView.value = 'home';
   mode.value = 'theme';
-  status.value = libraryMode.value ? 'Select a local skin or theme to edit.' : 'Upload a theme ZIP to start editing.';
+  status.value = libraryMode.value ? '请选择本地付款皮肤或主题进行编辑。' : '请上传主题 ZIP 开始编辑。';
 }
 
 loadLibrary();
@@ -529,38 +535,39 @@ loadLibrary();
   <main class="workspace">
     <header class="topbar">
       <div>
-        <h1>Alipay Theme Editor (Beta)</h1>
+        <h1>HoHo皮肤修改器</h1>
         <p>{{ status }}</p>
       </div>
       <div class="actions">
         <label v-if="!libraryMode" class="upload-button">
-          Upload ZIP
+          上传 ZIP
           <input type="file" accept=".zip,application/zip" @change="uploadZip" />
         </label>
-        <button v-if="libraryMode" class="primary" :disabled="saving || !data" @click="activateAndApply">Activate &amp; Apply</button>
-        <button v-if="libraryMode" :disabled="saving || !data" @click="saveTheme">Save</button>
-        <button v-if="!libraryMode" class="primary" :disabled="saving || !data" @click="downloadZip">Download ZIP</button>
-        <button :disabled="!data" @click="cancelEdit">Cancel Edit</button>
-        <button @click="debug.open = !debug.open">{{ debug.open ? 'Hide Debug' : 'Debug' }}</button>
+        <button v-if="editingTheme" class="primary" :disabled="saving || !data" @click="activateAndApply">启用并应用</button>
+        <button v-if="editingSkin" class="primary" :disabled="saving || !data" @click="activateAndApply">保存并更新</button>
+        <button v-if="libraryMode" :disabled="saving || !data" @click="saveTheme">保存</button>
+        <button v-if="!libraryMode" class="primary" :disabled="saving || !data" @click="downloadZip">下载 ZIP</button>
+        <button :disabled="!data" @click="cancelEdit">返回</button>
+        <button @click="debug.open = !debug.open">{{ debug.open ? '隐藏调试' : '调试' }}</button>
       </div>
     </header>
 
     <section v-if="debug.open" class="debug-panel">
       <header>
-        <strong>Debug</strong>
-        <button @click="copyDebug">Copy</button>
-        <button @click="debug.open = false">Close</button>
+        <strong>调试</strong>
+        <button @click="copyDebug">复制</button>
+        <button @click="debug.open = false">关闭</button>
       </header>
-      <pre class="debug-summary">{{ debug.summary || 'No data loaded yet.' }}</pre>
+      <pre class="debug-summary">{{ debug.summary || '尚未加载数据。' }}</pre>
       <details>
-        <summary>Raw response ({{ (debug.raw || '').length }} bytes)</summary>
+        <summary>原始响应 ({{ (debug.raw || '').length }} 字节)</summary>
         <pre class="debug-raw">{{ debug.raw }}</pre>
       </details>
     </section>
 
     <section v-if="!data && libraryMode" class="library-start">
       <section>
-        <h2>Local Skins</h2>
+        <h2>本地付款皮肤</h2>
         <div class="library-grid">
           <button v-for="item in libraryItems.skins" :key="`skin-${item.dirName}`" @click="selectLibraryItem('skins', item)">
             <strong>{{ item.displayName || item.dirName }}</strong>
@@ -569,7 +576,7 @@ loadLibrary();
         </div>
       </section>
       <section>
-        <h2>Local Themes</h2>
+        <h2>本地主题</h2>
         <div class="library-grid">
           <button v-for="item in libraryItems.themes" :key="`theme-${item.dirName}`" @click="selectLibraryItem('themes', item)">
             <strong>{{ item.displayName || item.dirName }}</strong>
@@ -580,10 +587,10 @@ loadLibrary();
     </section>
 
     <section v-else-if="!data" class="empty-state">
-      <h2>Upload a theme package</h2>
-      <p>The first version expects a ZIP with meta.json at the theme root and optionally ltp/meta.json for the payment skin.</p>
+      <h2>上传主题包</h2>
+      <p>ZIP 顶层需要包含主题 meta.json；如果包含付款皮肤，请放在 ltp/meta.json。</p>
       <label class="large-upload">
-        Choose ZIP
+        选择 ZIP
         <input type="file" accept=".zip,application/zip" @change="uploadZip" />
       </label>
     </section>
@@ -603,7 +610,7 @@ loadLibrary();
 
         <div class="resource-list">
           <div v-if="editableResources.length === 0" class="resource-empty">
-            No editable color, gradient, or image resources were found in this item.
+            当前项目没有可编辑的颜色、渐变或图片资源。
           </div>
           <article v-for="resource in editableResources" :key="`${mode}-${resource.position}`" class="resource-row">
             <div>
@@ -622,11 +629,11 @@ loadLibrary();
 
             <div v-else-if="resourceKind(resource) === 'gradient'" class="gradient-control">
               <label>
-                <span>Start</span>
+                <span>起始</span>
                 <input v-model="resource.gradient.start" type="color" />
               </label>
               <label>
-                <span>End</span>
+                <span>结束</span>
                 <input v-model="resource.gradient.end" type="color" />
               </label>
             </div>
@@ -635,14 +642,14 @@ loadLibrary();
               <img
                 :src="imageUrl(mode, resourceImage(resource))"
                 alt=""
-                title="Click to download"
+                title="点击下载"
                 @click="downloadAsset(mode, resource)"
               />
               <label class="file-button">
-                Replace
+                替换
                 <input type="file" accept="image/*" @change="uploadAsset(mode, resource, $event)" />
               </label>
-              <button class="file-button" @click="openCrop(mode, resource)">Crop</button>
+              <button class="file-button" @click="openCrop(mode, resource)">裁剪</button>
             </div>
           </article>
         </div>
@@ -669,8 +676,8 @@ loadLibrary();
                 color: color(activeView === 'me' ? 'me_navi_theme_fg_color' : 'home_navi_theme_fg_color', '#ffffff'),
               }"
             >
-              <span>{{ activeView === 'me' ? 'Me' : 'Alipay' }}</span>
-              <div v-if="activeView === 'me'" class="navi-title">Account Center</div>
+              <span>{{ activeView === 'me' ? '我的' : '支付宝' }}</span>
+              <div v-if="activeView === 'me'" class="navi-title">个人中心</div>
               <div v-else class="navi-actions">
                 <div v-for="[icon, label] in homeActions" :key="icon">
                   <img :src="imageUrl('theme', icon)" alt="" />
@@ -718,7 +725,7 @@ loadLibrary();
                 }"
               >
                 <header>
-                  <span class="member-label">Diamond Member</span>
+                  <span class="member-label">钻石会员</span>
                   <img class="logo" :src="skinImageFor('z02.0002')" alt="" />
                   <img class="mask" :src="skinImageFor('z02.0003')" alt="" />
                 </header>
@@ -732,7 +739,7 @@ loadLibrary();
     </section>
 
     <footer class="copyright">
-      Author:
+      作者:
       <a href="https://github.com/nov30th/AlipayHighHeadsomeRichAndroid" target="_blank" rel="noopener noreferrer">Nov30th, HOHO``</a>
     </footer>
 
@@ -740,10 +747,10 @@ loadLibrary();
       <section class="crop-dialog">
         <header>
           <div>
-            <h2>Crop Image</h2>
+            <h2>裁剪图片</h2>
             <p>{{ cropState.assetName }}</p>
           </div>
-          <button @click="closeCrop">Close</button>
+          <button @click="closeCrop">关闭</button>
         </header>
         <div class="crop-stage">
           <div class="crop-image-wrap">
@@ -769,8 +776,8 @@ loadLibrary();
           </div>
         </div>
         <footer>
-          <button @click="closeCrop">Cancel</button>
-          <button class="primary" :disabled="!canSaveCrop" @click="saveCrop">Save Crop</button>
+          <button @click="closeCrop">取消</button>
+          <button class="primary" :disabled="!canSaveCrop" @click="saveCrop">保存裁剪</button>
         </footer>
       </section>
     </div>

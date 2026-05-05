@@ -13,8 +13,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,11 +88,11 @@ public final class EditorHttpServer extends NanoHTTPD {
         }
         if (themeMeta != null) {
             sb.append("\n=== theme meta.json (").append(themeMeta.getAbsolutePath()).append(") ===\n");
-            sb.append(themeMeta.isFile() ? new String(SkinIO.readAllBytes(themeMeta), StandardCharsets.UTF_8) : "<missing>");
+            sb.append(themeMeta.isFile() ? readText(themeMeta) : "<missing>");
         }
         if (skinMeta != null) {
             sb.append("\n=== skin meta.json (").append(skinMeta.getAbsolutePath()).append(") ===\n");
-            sb.append(skinMeta.isFile() ? new String(SkinIO.readAllBytes(skinMeta), StandardCharsets.UTF_8) : "<missing>");
+            sb.append(skinMeta.isFile() ? readText(skinMeta) : "<missing>");
         }
         sb.append("\n\n=== /api/library payload ===\n");
         try {
@@ -136,16 +141,16 @@ public final class EditorHttpServer extends NanoHTTPD {
 
         if (parts.length == 4 && "assets".equals(parts[2])) {
             String[] assetParts = parts[3].split("/", 2);
-            if (assetParts.length != 2) return jsonError(Response.Status.BAD_REQUEST, "Missing asset area or path");
             String area = decode(assetParts[0]);
-            String assetPath = decode(assetParts[1]);
             File areaRoot = resolveAreaRoot(kind, itemDir, area);
-            File asset = safeChild(areaRoot, assetPath);
-            if (method == Method.GET) return fileResponse(asset);
             if (method == Method.POST) {
                 saveAssetUpload(session, areaRoot);
                 return json(Response.Status.OK, ok());
             }
+            if (assetParts.length != 2) return jsonError(Response.Status.BAD_REQUEST, "Missing asset path");
+            String assetPath = decode(assetParts[1]);
+            File asset = safeChild(areaRoot, assetPath);
+            if (method == Method.GET) return fileResponse(asset);
         }
 
         return jsonError(Response.Status.METHOD_NOT_ALLOWED, "Unsupported request");
@@ -289,10 +294,28 @@ public final class EditorHttpServer extends NanoHTTPD {
     }
 
     private JSONObject parseBodyJson(IHTTPSession session) throws Exception {
-        Map<String, String> files = new HashMap<>();
-        session.parseBody(files);
-        String postData = files.get("postData");
-        if (postData == null) postData = "";
+        int contentLength = 0;
+        String lengthHeader = session.getHeaders().get("content-length");
+        if (lengthHeader != null) {
+            try {
+                contentLength = Integer.parseInt(lengthHeader);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        InputStream in = session.getInputStream();
+        ByteArrayOutputStream out = new ByteArrayOutputStream(Math.max(contentLength, 1024));
+        byte[] buffer = new byte[4096];
+        int remaining = contentLength;
+        while (remaining != 0) {
+            int max = remaining > 0 ? Math.min(buffer.length, remaining) : buffer.length;
+            int read = in.read(buffer, 0, max);
+            if (read < 0) break;
+            out.write(buffer, 0, read);
+            if (remaining > 0) remaining -= read;
+        }
+        String postData = new String(out.toByteArray(), StandardCharsets.UTF_8);
+        if (postData.trim().isEmpty()) return new JSONObject(true);
         return JSONObject.parseObject(postData);
     }
 
@@ -399,7 +422,20 @@ public final class EditorHttpServer extends NanoHTTPD {
     }
 
     private JSONObject readJson(File file) throws IOException {
-        return JSONObject.parseObject(new String(SkinIO.readAllBytes(file), StandardCharsets.UTF_8));
+        return JSONObject.parseObject(readText(file));
+    }
+
+    private String readText(File file) throws IOException {
+        byte[] bytes = SkinIO.readAllBytes(file);
+        try {
+            return StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+        } catch (CharacterCodingException e) {
+            return Charset.forName("GB18030").decode(ByteBuffer.wrap(bytes)).toString();
+        }
     }
 
     private void writeUtf8(File file, String text) throws IOException {
