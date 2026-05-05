@@ -1,0 +1,23 @@
+{
+  "name": "alipay-theme-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"vite --host 127.0.0.1\"",
+    "server": "node server/index.js",
+    "test": "node --test",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "adm-zip": "^0.5.16",
+    "concurrently": "^9.1.2",
+    "express": "^4.21.2",
+    "multer": "^2.0.0",
+    "vite": "^5.4.19",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {}
+}

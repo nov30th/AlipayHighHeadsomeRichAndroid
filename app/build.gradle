@@ -7,13 +7,45 @@ android {
         applicationId "im.hoho.alipayInstallB"
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 117
-        versionName "2.6.5"
+        versionCode 119
+        versionName "2.6.6"
     }
     namespace 'im.hoho.alipayInstallB'
     buildToolsVersion '34.0.0'
 
 }
+
+def editorDir = file("${rootDir}/theme-editor")
+def editorDistDir = file("${editorDir}/dist")
+def editorAssetsDir = file("${projectDir}/src/main/assets/editor")
+def npmCommand = org.gradle.internal.os.OperatingSystem.current().isWindows() ? "npm.cmd" : "npm"
+
+task npmInstallThemeEditor(type: Exec) {
+    workingDir editorDir
+    commandLine npmCommand, "install"
+    inputs.file file("${editorDir}/package.json")
+    inputs.file file("${editorDir}/package-lock.json")
+    outputs.dir file("${editorDir}/node_modules")
+}
+
+task buildThemeEditor(type: Exec) {
+    dependsOn npmInstallThemeEditor
+    workingDir editorDir
+    commandLine npmCommand, "run", "build"
+    inputs.dir file("${editorDir}/src")
+    inputs.file file("${editorDir}/index.html")
+    inputs.file file("${editorDir}/package.json")
+    inputs.file file("${editorDir}/vite.config.js")
+    outputs.dir editorDistDir
+}
+
+task copyThemeEditorAssets(type: Sync) {
+    dependsOn buildThemeEditor
+    from editorDistDir
+    into editorAssetsDir
+}
+
+preBuild.dependsOn copyThemeEditorAssets
 
 repositories {
     mavenCentral()
@@ -22,6 +54,7 @@ repositories {
 
 dependencies {
     implementation 'net.lingala.zip4j:zip4j:2.11.5'
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
 
     compileOnly 'de.robv.android.xposed:api:82'
     implementation fileTree(include: ['*.jar'], dir: 'libs')

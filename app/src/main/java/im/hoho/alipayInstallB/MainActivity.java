@@ -2,6 +2,9 @@ package im.hoho.alipayInstallB;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -49,16 +52,21 @@ import com.google.android.material.tabs.TabLayout;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import im.hoho.alipayInstallB.editor.EditorHttpServer;
 import im.hoho.alipayInstallB.skin.RemoteManifest;
 import im.hoho.alipayInstallB.skin.SkinEntry;
 import im.hoho.alipayInstallB.skin.SkinLibrary;
 import im.hoho.alipayInstallB.skin.SkinMigration;
+import im.hoho.alipayInstallB.skin.SkinIO;
 import im.hoho.alipayInstallB.skin.SkinPaths;
 
 public class MainActivity extends Activity {
@@ -92,6 +100,7 @@ public class MainActivity extends Activity {
     
     private ExecutorService executorService;
     private Handler mainHandler;
+    private EditorHttpServer editorServer;
 
     private static final class BusyDialog {
         final AlertDialog dialog;
@@ -362,6 +371,8 @@ public class MainActivity extends Activity {
         executorService = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
 
+        cleanupTempFiles();
+
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         if (settings.getBoolean(KEY_FIRST_RUN, true)) {
             showPrivacyDialog(settings);
@@ -382,6 +393,9 @@ public class MainActivity extends Activity {
                 return true;
             } else if (id == R.id.action_export_builtin) {
                 doRequestBuiltinExport();
+                return true;
+            } else if (id == R.id.action_editor) {
+                openWebEditor();
                 return true;
             } else if (id == R.id.action_github) {
                 openProjectHomepage();
@@ -807,6 +821,95 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void openWebEditor() {
+        if (!checkStoragePermission()) {
+            requestStoragePermission();
+            return;
+        }
+        try {
+            if (editorServer == null || !editorServer.isAlive()) {
+                editorServer = new EditorHttpServer(this);
+                editorServer.start();
+            }
+            String localUrl = "http://127.0.0.1:" + EditorHttpServer.PORT + "/";
+            String lanIp = findLanIp();
+            String lanUrl = lanIp == null ? localUrl : "http://" + lanIp + ":" + EditorHttpServer.PORT + "/";
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("网页编辑器已启动")
+                    .setMessage("手机浏览器:\n" + localUrl + "\n\n局域网电脑:\n" + lanUrl + "\n\n编辑器会直接读取并覆盖本地 skins/ 与 themes/ 文件。")
+                    .setPositiveButton("打开", (d, w) -> openUrl(localUrl))
+                    .setNegativeButton("复制局域网地址", (d, w) -> {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) {
+                            cm.setPrimaryClip(ClipData.newPlainText("HOHO editor URL", lanUrl));
+                            Toast.makeText(this, "已复制: " + lanUrl, Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNeutralButton("停止服务", (d, w) -> stopWebEditor())
+                    .show();
+        } catch (Exception e) {
+            Toast.makeText(this, "启动网页编辑器失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void stopWebEditor() {
+        if (editorServer != null) {
+            editorServer.stop();
+            editorServer = null;
+        }
+    }
+
+    private void cleanupTempFiles() {
+        try {
+            File importsTmp = SkinPaths.importsTmpDir();
+            File[] kids = importsTmp.isDirectory() ? importsTmp.listFiles() : null;
+            if (kids != null) {
+                for (File kid : kids) SkinIO.deleteRecursive(kid);
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            File cache = getCacheDir();
+            File[] kids = cache != null && cache.isDirectory() ? cache.listFiles() : null;
+            if (kids != null) {
+                for (File kid : kids) {
+                    String name = kid.getName();
+                    if (name.startsWith("NanoHTTPD-") || name.startsWith("nanohttpd-")) {
+                        SkinIO.deleteRecursive(kid);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void openUrl(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Toast.makeText(this, "无法打开浏览器: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String findLanIp() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface ni = interfaces.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                Enumeration<java.net.InetAddress> addresses = ni.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    java.net.InetAddress address = addresses.nextElement();
+                    if (address instanceof Inet4Address && !address.isLoopbackAddress()) {
+                        return address.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
     private void refreshActivateButton() {
         btnActivate.setOnCheckedChangeListener(null);
         btnActivate.setChecked(SkinLibrary.isActived());
@@ -940,6 +1043,13 @@ public class MainActivity extends Activity {
         if (requestCode == REQUEST_PICK_ZIP && resultCode == RESULT_OK && data != null && data.getData() != null) {
             importFromUri(data.getData());
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopWebEditor();
+        if (executorService != null) executorService.shutdownNow();
+        super.onDestroy();
     }
 
     private void importFromUri(Uri uri) {

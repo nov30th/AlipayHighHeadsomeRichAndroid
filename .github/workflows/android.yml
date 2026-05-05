@@ -19,6 +19,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
+    - name: set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: npm
+        cache-dependency-path: theme-editor/package-lock.json
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
