@@ -595,9 +595,8 @@ loadLibrary();
                   <img class="logo" :src="imageUrl('skin', 'logo')" alt="" />
                   <img class="mask" :src="imageUrl('skin', 'mask')" alt="" />
                 </header>
-                <div class="qr"></div>
                 <div class="barcode"></div>
-                <button>Pay Now</button>
+                <div class="qr"></div>
               </section>
             </div>
           </template>

@@ -426,7 +426,7 @@ button:disabled {
 .qr {
   width: 178px;
   height: 178px;
-  margin: 28px auto 18px;
+  margin: 0 auto 28px;
   background:
     linear-gradient(90deg, #111 8px, transparent 8px) 0 0 / 22px 22px,
     linear-gradient(#111 8px, transparent 8px) 0 0 / 22px 22px,
@@ -437,17 +437,8 @@ button:disabled {
 .barcode {
   width: 210px;
   height: 46px;
-  margin: 0 auto 22px;
+  margin: 28px auto 18px;
   background: repeating-linear-gradient(90deg, #111 0 3px, #fff 3px 8px, #111 8px 10px, #fff 10px 16px);
-}
-
-.pay-card button {
-  display: block;
-  width: calc(100% - 36px);
-  margin: 0 18px 22px;
-  border: 0;
-  background: #1677ff;
-  color: #fff;
 }
 
 .crop-modal {
