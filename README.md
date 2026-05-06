@@ -96,7 +96,7 @@
 
 ## 📝 版本更新日志
 
-完整版本历史及更新内容请参阅 [更新日志文档](Updates.md)。
+完整版本历史及更新内容请参阅 [更新日志文档](https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/Updates.md)。
 
 ## 📌 项目说明
 
