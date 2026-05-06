@@ -25,3 +25,4 @@
   gh release upload <tag> "E:/下载/release/app-release.apk" --clobber
   ```
   Apply to both repos (main `v<versionName>` tag and Xposed repo `<versionCode>-<versionName>` tag).
+  Also copy the latest README.md file to xposed repo.
