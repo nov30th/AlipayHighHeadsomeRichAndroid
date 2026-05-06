@@ -533,7 +533,7 @@ public class MainActivity extends Activity {
     }
 
     private void setupTabs() {
-        tabLayout.addTab(tabLayout.newTab().setText("付款皮肤"));
+        tabLayout.addTab(tabLayout.newTab().setText("付款码皮肤"));
         tabLayout.addTab(tabLayout.newTab().setText("主题"));
         tabLayout.addTab(tabLayout.newTab().setText("皮肤修改器"));
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
@@ -789,7 +789,7 @@ public class MainActivity extends Activity {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenu().add(0, 1, 0, "导出为 Zip");
         if (theme.hasLtpSkin) {
-            popup.getMenu().add(0, 2, 1, "提取付款皮肤");
+            popup.getMenu().add(0, 2, 1, "提取付款码皮肤");
         }
         popup.getMenu().add(0, 3, 2, "删除主题");
         popup.setOnMenuItemClickListener(item -> {
@@ -830,7 +830,7 @@ public class MainActivity extends Activity {
             SkinLibrary.ImportResult r = SkinLibrary.extractThemeLtpSkin(theme.dirName);
             mainHandler.post(() -> {
                 if (r.success) {
-                    Toast.makeText(this, "已提取付款皮肤: " + r.dirName, Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "已提取付款码皮肤: " + r.dirName, Toast.LENGTH_LONG).show();
                     loadSkins();
                 } else {
                     Toast.makeText(this, "提取失败: " + r.message, Toast.LENGTH_LONG).show();

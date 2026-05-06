@@ -206,7 +206,7 @@ public final class SkinLibrary {
         }
         File ltpDir = new File(themeDir, "ltp");
         if (!ltpDir.exists() || !ltpDir.isDirectory() || !new File(ltpDir, "meta.json").isFile()) {
-            return ImportResult.fail("该主题不包含可提取的付款皮肤");
+            return ImportResult.fail("该主题不包含可提取的付款码皮肤");
         }
         if (!SkinMeta.isValid(ltpDir)) {
             return ImportResult.fail("ltp/meta.json 校验失败");
@@ -217,7 +217,7 @@ public final class SkinLibrary {
         }
         File target = new File(skinsDir, themeDirName);
         if (target.exists() && !SkinIO.deleteRecursive(target)) {
-            return ImportResult.fail("无法覆盖旧付款皮肤: " + themeDirName);
+            return ImportResult.fail("无法覆盖旧付款码皮肤: " + themeDirName);
         }
         try {
             SkinIO.copyDir(ltpDir, target);

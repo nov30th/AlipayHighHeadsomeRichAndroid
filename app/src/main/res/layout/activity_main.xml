@@ -111,7 +111,7 @@
                             android:id="@+id/btnActivate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="皮肤总开关"
+                            android:text="独立付款皮肤"
                             android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
                     </LinearLayout>
                 </LinearLayout>

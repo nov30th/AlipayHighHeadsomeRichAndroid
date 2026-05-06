@@ -36,7 +36,7 @@ const editingSkin = computed(() => libraryMode.value && data.value?.kind === 'sk
 const visibleTabs = computed(() => (hasTheme.value ? tabs : [['pay', '付款码']]));
 const visibleModes = computed(() => [
   ...(hasTheme.value ? [['theme', '主题']] : []),
-  ...(hasSkin.value ? [['skin', '付款皮肤']] : []),
+  ...(hasSkin.value ? [['skin', '付款码皮肤']] : []),
 ]);
 
 function clone(value) {
@@ -208,7 +208,7 @@ async function loadLibrary() {
     libraryItems.value = await response.json();
     data.value = null;
     sessionId.value = '';
-    status.value = '请选择本地付款皮肤或主题进行编辑。';
+    status.value = '请选择本地付款码皮肤或主题进行编辑。';
   } catch (_error) {
     libraryMode.value = false;
     status.value = '请上传主题 ZIP 开始编辑。';
@@ -443,7 +443,7 @@ async function activateAndApply() {
   if (!libraryMode.value || !data.value) return;
   try {
     saving.value = true;
-    status.value = editingTheme.value ? '正在启用并应用主题...' : '正在保存并更新付款皮肤...';
+    status.value = editingTheme.value ? '正在启用并应用主题...' : '正在保存并更新付款码皮肤...';
     const url = `/api/library/${encodeURIComponent(data.value.kind)}/${encodeURIComponent(data.value.dirName)}/activate`;
     const response = await fetch(url, {
       method: 'POST',
@@ -460,7 +460,7 @@ async function activateAndApply() {
     if (editingTheme.value) {
       status.value = '已启用。请完全关闭并重新打开支付宝，让新主题复制生效。';
     } else {
-      status.value = '已保存并创建付款皮肤更新请求，请重新打开支付宝付款码生效。';
+      status.value = '已保存并创建付款码皮肤更新请求，请重新打开支付宝付款码生效。';
     }
     if (editingTheme.value && typeof window !== 'undefined') {
       window.alert('主题已启用并应用。\n\n请完全关闭并重新打开支付宝，让新主题复制生效。');
@@ -525,7 +525,7 @@ function cancelEdit() {
   sessionId.value = '';
   activeView.value = 'home';
   mode.value = 'theme';
-  status.value = libraryMode.value ? '请选择本地付款皮肤或主题进行编辑。' : '请上传主题 ZIP 开始编辑。';
+  status.value = libraryMode.value ? '请选择本地付款码皮肤或主题进行编辑。' : '请上传主题 ZIP 开始编辑。';
 }
 
 loadLibrary();
@@ -567,7 +567,7 @@ loadLibrary();
 
     <section v-if="!data && libraryMode" class="library-start">
       <section>
-        <h2>本地付款皮肤</h2>
+        <h2>本地付款码皮肤</h2>
         <div class="library-grid">
           <button v-for="item in libraryItems.skins" :key="`skin-${item.dirName}`" @click="selectLibraryItem('skins', item)">
             <strong>{{ item.displayName || item.dirName }}</strong>
@@ -588,7 +588,7 @@ loadLibrary();
 
     <section v-else-if="!data" class="empty-state">
       <h2>上传主题包</h2>
-      <p>ZIP 顶层需要包含主题 meta.json；如果包含付款皮肤，请放在 ltp/meta.json。</p>
+      <p>ZIP 顶层需要包含主题 meta.json；如果包含付款码皮肤，请放在 ltp/meta.json。</p>
       <label class="large-upload">
         选择 ZIP
         <input type="file" accept=".zip,application/zip" @change="uploadZip" />
