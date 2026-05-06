@@ -1,3 +1,11 @@
+## 2026.05 Android 10 存储权限修复
+
+修复 Android 10（API 29）上皮肤和主题文件可能无法写入的问题。
+
+原因是 Android 10 对 targetSdk 29 及以上应用默认启用分区存储，而本模块需要继续通过文件路径访问 `Android/media/com.eg.android.AlipayGphone/000_HOHO_ALIPAY_SKIN`。本次在 Manifest 中加入 `requestLegacyExternalStorage`，让 Android 10 继续使用旧版外部存储访问方式。
+
+同时优化主题导出触发方式：创建导出请求后，请打开支付宝付款码界面触发导出；如果支付宝主题缓存尚未准备好，请求标记会保留，后续再次进入付款码时继续尝试。
+
 ## 2026.05主题功能更新
 
 新增 **主题** 标签页，支持导出支付宝当前账号已下发的 App 主题，并在本地保存到 `themes/` 文件夹。

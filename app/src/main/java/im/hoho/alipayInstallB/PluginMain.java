@@ -123,7 +123,7 @@ public class PluginMain implements IXposedHookLoadPackage {
             XposedHelpers.findAndHookMethod("android.app.Activity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    handleThemeExportRequest();
+                    handleThemeExportRequest(lpparam.classLoader);
                     handleThemeReplaceRequest(lpparam.classLoader);
 
                     String newGrade = getCurrentMemberGrade();
@@ -164,6 +164,8 @@ public class PluginMain implements IXposedHookLoadPackage {
                         XposedBridge.log("[v2] skin root missing, skip");
                         return;
                     }
+
+                    handleThemeExportRequest(lpparam.classLoader);
 
                     File hohoCache = SkinPaths.alipayHohoCache();
                     File actived = SkinPaths.activedFlag();
@@ -293,31 +295,64 @@ public class PluginMain implements IXposedHookLoadPackage {
         return "原有";
     }
 
-    private static void handleThemeExportRequest() {
+    private static void handleThemeExportRequest(ClassLoader classLoader) {
         File flag = SkinPaths.themeExportFlag();
         if (!flag.exists()) return;
 
         try {
             File sourceRoot = SkinPaths.alipayThemeRoot();
             File outputRoot = SkinPaths.themesDir();
-            if (!outputRoot.exists()) outputRoot.mkdirs();
-
-            int exported = 0;
-            if (!sourceRoot.exists() || !sourceRoot.isDirectory()) {
-                XposedBridge.log("[theme] source root missing: " + sourceRoot.getAbsolutePath());
+            if (!outputRoot.exists() && !outputRoot.mkdirs()) {
+                XposedBridge.log("[theme] export deferred, cannot create output root: "
+                        + outputRoot.getAbsolutePath());
                 return;
             }
 
-            File[] userDirs = sourceRoot.listFiles();
-            if (userDirs == null) {
-                XposedBridge.log("[theme] source root unreadable: " + sourceRoot.getAbsolutePath());
+            int exported = 0;
+            if (!sourceRoot.exists() || !sourceRoot.isDirectory()) {
+                XposedBridge.log("[theme] export deferred, source root missing: "
+                        + sourceRoot.getAbsolutePath());
                 return;
+            }
+
+            List<File> userDirs = new ArrayList<>();
+            String currentUserId = getAlipayCurrentUserId(classLoader);
+            XposedBridge.log("[theme] export requested, currentUserId=" + currentUserId);
+            if (currentUserId != null && currentUserId.length() > 0) {
+                File currentUserDir = new File(sourceRoot, currentUserId);
+                if (currentUserDir.exists() && currentUserDir.isDirectory()) {
+                    userDirs.add(currentUserDir);
+                } else {
+                    XposedBridge.log("[theme] current user theme root missing: "
+                            + currentUserDir.getAbsolutePath());
+                }
+            }
+
+            File[] allUserDirs = sourceRoot.listFiles();
+            if (allUserDirs == null) {
+                XposedBridge.log("[theme] export deferred, source root unreadable: "
+                        + sourceRoot.getAbsolutePath());
+                return;
+            }
+            for (File userDir : allUserDirs) {
+                if (userDir == null || !userDir.isDirectory()) continue;
+                boolean alreadyAdded = false;
+                for (File added : userDirs) {
+                    if (added.equals(userDir)) {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+                if (!alreadyAdded) userDirs.add(userDir);
             }
 
             for (File userDir : userDirs) {
                 if (userDir == null || !userDir.isDirectory()) continue;
                 File themeDir = new File(userDir, "theme");
-                if (!themeDir.exists() || !themeDir.isDirectory()) continue;
+                if (!themeDir.exists() || !themeDir.isDirectory()) {
+                    XposedBridge.log("[theme] no theme dir under: " + userDir.getAbsolutePath());
+                    continue;
+                }
 
                 File ltpDir = new File(userDir, "ltp");
                 File[] themes = themeDir.listFiles();
@@ -342,13 +377,14 @@ public class PluginMain implements IXposedHookLoadPackage {
             }
 
             XposedBridge.log("[theme] export completed, count=" + exported);
+            if (exported > 0) {
+                SkinIO.deleteRecursive(flag);
+                XposedBridge.log("[theme] export flag cleared");
+            } else {
+                XposedBridge.log("[theme] export deferred, no theme found yet; keep flag");
+            }
         } catch (Exception e) {
             XposedBridge.log("[theme] export error: " + e.getMessage());
-        } finally {
-            try {
-                SkinIO.deleteRecursive(flag);
-            } catch (Exception ignored) {
-            }
         }
     }
 
