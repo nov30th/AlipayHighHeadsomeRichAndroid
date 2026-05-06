@@ -91,7 +91,8 @@
 
 主题管理界面：
 
-<img src="images/Screenshot_theme.jpg" height="600" alt="支付宝主题管理界面" />
+<img src="https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/images/Screenshot_2026-05-06-12-31-31-390_im.hoho.alipay.jpg" height="600" alt="支付宝主题管理界面" />
+<img src="https://raw.githubusercontent.com/nov30th/AlipayHighHeadsomeRichAndroid/master/images/Screenshot_2026-05-06-12-31-44-221_im.hoho.alipay.jpg" height="600" alt="支付宝主题管理界面" />
 
 ## 📝 版本更新日志
 
