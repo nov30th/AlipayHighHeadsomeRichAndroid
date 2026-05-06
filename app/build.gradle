@@ -12,7 +12,19 @@ android {
     }
     namespace 'im.hoho.alipayInstallB'
     buildToolsVersion '34.0.0'
-
+    // 自定义打包输出的文件名
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
+            // 定义固定名字
+            def fileName = "AlipayInstallB"
+            // 获取版本名
+            def versionName = variant.versionName
+            // 获取构建类型（debug 或 release）
+            def buildType = variant.buildType.name
+            // 拼接文件名：MyAppName_v1.0_release.apk
+            outputFileName = "${fileName}_v${versionName}_${buildType}.apk"
+        }
+    }
 }
 
 def editorDir = file("${rootDir}/theme-editor")
