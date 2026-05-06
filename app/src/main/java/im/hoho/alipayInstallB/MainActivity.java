@@ -622,11 +622,11 @@ public class MainActivity extends Activity {
     private void confirmExportThemes() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle("导出支付宝主题")
-                .setMessage("将创建导出请求。请随后切换到支付宝，模块会在支付宝进程中读取当前账号主题并导出到 themes/ 文件夹。")
+                .setMessage("将创建导出请求。请随后打开支付宝付款码，模块会在支付宝进程中读取当前账号主题并导出到 themes/ 文件夹。")
                 .setPositiveButton("创建请求", (d, w) -> {
                     SkinLibrary.requestThemeExport();
                     refreshThemeExportStatus();
-                    Toast.makeText(this, "已创建主题导出请求，请切换到支付宝", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "已创建主题导出请求，请打开支付宝付款码", Toast.LENGTH_LONG).show();
                 })
                 .setNegativeButton("取消", null)
                 .show();
@@ -635,7 +635,7 @@ public class MainActivity extends Activity {
     private void refreshThemeExportStatus() {
         if (chipThemeExportStatus == null) return;
         if (SkinPaths.themeExportFlag().exists()) {
-            chipThemeExportStatus.setText("已创建请求，等待打开支付宝");
+            chipThemeExportStatus.setText("已创建请求，等待打开支付宝付款码");
         } else {
             File dir = SkinPaths.themesDir();
             File[] themes = dir.exists() && dir.isDirectory() ? dir.listFiles() : null;
@@ -677,7 +677,7 @@ public class MainActivity extends Activity {
         themeListContainer.removeAllViews();
         if (themeList.isEmpty()) {
             TextView empty = new TextView(this);
-            empty.setText("暂无已导出的主题\n\n点击上方导出所有主题，然后切换到支付宝");
+            empty.setText("暂无已导出的主题\n\n点击上方导出所有主题，然后打开支付宝付款码");
             empty.setGravity(android.view.Gravity.CENTER);
             empty.setTextColor(Color.parseColor("#777777"));
             empty.setTextSize(15);
@@ -815,7 +815,7 @@ public class MainActivity extends Activity {
                 SkinLibrary.saveSelectedTheme(theme.dirName);
                 SkinLibrary.requestThemeUpdate();
                 mainHandler.post(() -> {
-                    Toast.makeText(this, "已准备替换主题，请重新打开支付宝生效", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "已准备替换主题，请打开支付宝付款码触发生效", Toast.LENGTH_LONG).show();
                     loadThemes();
                 });
             } catch (Exception e) {

@@ -169,7 +169,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="创建导出请求后，重启支付宝。模块会把当前账号的主题复制到本地 themes/ 文件夹。"
+                            android:text="创建导出请求后，打开支付宝付款码界面触发导出。模块会把当前账号的主题复制到本地 themes/ 文件夹。"
                             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 

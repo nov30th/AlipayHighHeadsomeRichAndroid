@@ -129,7 +129,7 @@ public final class SkinLibrary {
     }
 
     /**
-     * 创建 theme_export 标记。Hook 在下次打开支付宝时导出当前账号的 app 主题。
+     * 创建 theme_export 标记。Hook 在下次进入付款码时导出当前账号的 app 主题。
      */
     public static void requestThemeExport() {
         ensureRoot();
